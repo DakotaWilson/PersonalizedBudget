@@ -176,4 +176,349 @@
         <h1 class="app-title">Serpent's Vault</h1>
         <p class="app-subtitle">Master your finances with cunning</p>
       </div>
-      <button class
+      <button class="bg-gray-800 hover:bg-gray-700 text-green-300 py-2 px-4 rounded border border-green-500" onclick="alert('Activity log feature will be added soon!')">
+        Activity Log
+      </button>
+    </div>
+    
+    <!-- Navigation -->
+    <div class="tab-container flex">
+      <button id="tab-dashboard" class="tab active" onclick="changeTab('dashboard')">Dashboard</button>
+      <button id="tab-income" class="tab" onclick="changeTab('income')">Income</button>
+      <button id="tab-bills" class="tab" onclick="changeTab('bills')">Bills</button>
+      <button id="tab-expenses" class="tab" onclick="changeTab('expenses')">Expenses</button>
+    </div>
+    
+    <!-- Content -->
+    <div id="content">
+      <!-- Dashboard content will be loaded here -->
+    </div>
+  </div>
+
+  <script>
+    // Sample data
+    const incomes = [
+      { id: 1, source: "Doctor Care", amount: 1500, date: "2025-02-25" },
+      { id: 2, source: "CORE", amount: 300, date: "2025-03-07" }
+    ];
+    
+    const bills = [
+      { id: 1, name: "Rent", amount: 1200, dueDate: "2025-03-01" },
+      { id: 2, name: "Internet", amount: 100, dueDate: "2025-03-11" }
+    ];
+    
+    const expenses = [
+      { id: 1, category: "Groceries", amount: 120, date: "2025-03-05" },
+      { id: 2, category: "Shopping", amount: 45, date: "2025-03-01" }
+    ];
+    
+    // Format helpers
+    function formatCurrency(amount) {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD'
+      }).format(amount);
+    }
+    
+    function formatDate(dateString) {
+      if (!dateString) return "";
+      const date = new Date(dateString);
+      return date.toLocaleDateString();
+    }
+    
+    // Calculate totals
+    function calculateTotals() {
+      const totalIncome = incomes.reduce((sum, item) => sum + Number(item.amount), 0);
+      const totalBills = bills.reduce((sum, item) => sum + Number(item.amount), 0);
+      const totalExpenses = expenses.reduce((sum, item) => sum + Number(item.amount), 0);
+      const balance = totalIncome - totalBills - totalExpenses;
+      
+      return { totalIncome, totalBills, totalExpenses, balance };
+    }
+    
+    // Group expenses by category
+    function getExpensesByCategory() {
+      const result = {};
+      expenses.forEach(expense => {
+        const category = expense.category;
+        if (!result[category]) {
+          result[category] = 0;
+        }
+        result[category] += Number(expense.amount);
+      });
+      return result;
+    }
+    
+    // Change tab function
+    function changeTab(tabName) {
+      // Update active tab
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.classList.remove('active');
+      });
+      document.getElementById(`tab-${tabName}`).classList.add('active');
+      
+      // Update content
+      const contentDiv = document.getElementById('content');
+      
+      if (tabName === 'dashboard') {
+        renderDashboard(contentDiv);
+      } else if (tabName === 'income') {
+        renderIncomeTracker(contentDiv);
+      } else if (tabName === 'bills') {
+        renderBillTracker(contentDiv);
+      } else if (tabName === 'expenses') {
+        renderExpenseTracker(contentDiv);
+      }
+    }
+    
+    // Render dashboard
+    function renderDashboard(container) {
+      const { totalIncome, totalBills, totalExpenses, balance } = calculateTotals();
+      const expensesByCategory = getExpensesByCategory();
+      
+      let html = `
+        <div class="card">
+          <h2 class="card-title">Financial Summary</h2>
+          <div class="stat-grid">
+            <div class="stat-card">
+              <h3 class="stat-label income-label">Income</h3>
+              <p class="stat-value income-value">${formatCurrency(totalIncome)}</p>
+            </div>
+            <div class="stat-card">
+              <h3 class="stat-label bills-label">Bills</h3>
+              <p class="stat-value bills-value">${formatCurrency(totalBills)}</p>
+            </div>
+            <div class="stat-card">
+              <h3 class="stat-label expenses-label">Expenses</h3>
+              <p class="stat-value expenses-value">${formatCurrency(totalExpenses)}</p>
+            </div>
+            <div class="stat-card">
+              <h3 class="stat-label balance-label">Balance</h3>
+              <p class="stat-value ${balance >= 0 ? 'balance-value-positive' : 'balance-value-negative'}">
+                ${formatCurrency(balance)}
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card">
+          <h2 class="card-title">Expense Breakdown</h2>
+          <div class="space-y-3">
+      `;
+      
+      const totalExpenseAmount = Object.values(expensesByCategory).reduce((sum, amount) => sum + amount, 0);
+      
+      if (Object.keys(expensesByCategory).length > 0) {
+        Object.entries(expensesByCategory).forEach(([category, amount]) => {
+          const percentage = totalExpenseAmount > 0 ? (amount / totalExpenseAmount) * 100 : 0;
+          
+          html += `
+            <div>
+              <div class="flex justify-between mb-1">
+                <span class="font-medium text-gray-300">${category}</span>
+                <span class="text-gray-300">
+                  ${formatCurrency(amount)} (${percentage.toFixed(1)}%)
+                </span>
+              </div>
+              <div class="progress-container">
+                <div class="progress-bar" style="width: ${percentage}%"></div>
+              </div>
+            </div>
+          `;
+        });
+      } else {
+        html += `<p class="text-gray-400">No expense data to display</p>`;
+      }
+      
+      html += `
+          </div>
+        </div>
+        
+        <div class="card">
+          <h2 class="card-title">Upcoming Bills</h2>
+          <div class="space-y-3">
+      `;
+      
+      const upcomingBills = bills
+        .filter(bill => new Date(bill.dueDate) >= new Date())
+        .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
+        .slice(0, 5);
+      
+      if (upcomingBills.length > 0) {
+        upcomingBills.forEach(bill => {
+          html += `
+            <div class="flex justify-between border-b border-gray-700 pb-2">
+              <div>
+                <div class="font-medium text-gray-300">${bill.name}</div>
+                <div class="text-sm text-gray-400">Due: ${formatDate(bill.dueDate)}</div>
+              </div>
+              <div class="text-yellow-300 font-medium">${formatCurrency(bill.amount)}</div>
+            </div>
+          `;
+        });
+      } else {
+        html += `<p class="text-gray-400">No upcoming bills</p>`;
+      }
+      
+      html += `
+          </div>
+        </div>
+      `;
+      
+      container.innerHTML = html;
+    }
+    
+    // Render income tracker
+    function renderIncomeTracker(container) {
+      let html = `
+        <div class="card">
+          <h2 class="card-title">Add New Income</h2>
+          <div class="form-grid">
+            <div>
+              <label class="form-label">Source</label>
+              <select id="income-source" class="form-select">
+                <option value="Doctor Care">Doctor Care</option>
+                <option value="CORE">CORE</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            
+            <div id="custom-source-container" style="display: none;">
+              <label class="form-label">Specify Source</label>
+              <input type="text" id="income-custom-source" class="form-input" placeholder="Income source">
+            </div>
+            
+            <div>
+              <label class="form-label">Amount</label>
+              <input type="number" id="income-amount" class="form-input" placeholder="0.00">
+            </div>
+            
+            <div>
+              <label class="form-label">Date</label>
+              <input type="date" id="income-date" class="form-input">
+            </div>
+          </div>
+          <div class="mt-4">
+            <button id="add-income-btn" class="btn btn-green">Add Income</button>
+          </div>
+        </div>
+        
+        <div class="card">
+          <h2 class="card-title">Income History</h2>
+          <div id="income-list">
+            <!-- Income entries will be added here -->
+          </div>
+        </div>
+      `;
+      
+      container.innerHTML = html;
+      
+      // Show/hide custom source field
+      const sourceSelect = document.getElementById('income-source');
+      const customSourceContainer = document.getElementById('custom-source-container');
+      
+      sourceSelect.addEventListener('change', function() {
+        customSourceContainer.style.display = this.value === 'Other' ? 'block' : 'none';
+      });
+      
+      // Render income list
+      renderIncomeList();
+      
+      // Add income button event
+      document.getElementById('add-income-btn').addEventListener('click', function() {
+        const source = sourceSelect.value;
+        const customSource = document.getElementById('income-custom-source').value;
+        const amount = document.getElementById('income-amount').value;
+        const date = document.getElementById('income-date').value;
+        
+        if (!amount || !date) {
+          alert('Please fill in all required fields');
+          return;
+        }
+        
+        const finalSource = source === 'Other' ? (customSource || 'Other Income') : source;
+        
+        const newId = incomes.length > 0 ? Math.max(...incomes.map(i => i.id)) + 1 : 1;
+        incomes.push({
+          id: newId,
+          source: finalSource,
+          amount: Number(amount),
+          date: date
+        });
+        
+        // Reset form
+        sourceSelect.value = 'Doctor Care';
+        document.getElementById('income-custom-source').value = '';
+        document.getElementById('income-amount').value = '';
+        document.getElementById('income-date').value = '';
+        customSourceContainer.style.display = 'none';
+        
+        // Update income list
+        renderIncomeList();
+      });
+    }
+    
+    // Render income list
+    function renderIncomeList() {
+      const container = document.getElementById('income-list');
+      
+      if (incomes.length > 0) {
+        let html = `
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead>
+                <tr class="text-left border-b border-gray-700">
+                  <th class="p-2 text-gray-300">Source</th>
+                  <th class="p-2 text-gray-300">Date</th>
+                  <th class="p-2 text-right text-gray-300">Amount</th>
+                  <th class="p-2 text-center text-gray-300">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
+        
+        incomes.forEach(income => {
+          html += `
+            <tr class="border-b border-gray-700">
+              <td class="p-2 text-gray-300">${income.source}</td>
+              <td class="p-2 text-gray-300">${formatDate(income.date)}</td>
+              <td class="p-2 text-right text-green-300">${formatCurrency(income.amount)}</td>
+              <td class="p-2 text-center">
+                <button class="text-red-400 hover:text-red-300" onclick="deleteIncome(${income.id})">
+                  Delete
+                </button>
+              </td>
+            </tr>
+          `;
+        });
+        
+        html += `
+              </tbody>
+            </table>
+          </div>
+        `;
+        
+        container.innerHTML = html;
+      } else {
+        container.innerHTML = `<p class="text-gray-400">No income entries yet</p>`;
+      }
+    }
+    
+    // Delete income
+    function deleteIncome(id) {
+      const index = incomes.findIndex(i => i.id === id);
+      if (index !== -1) {
+        incomes.splice(index, 1);
+        renderIncomeList();
+      }
+    }
+    
+    // Initialize with dashboard
+    changeTab('dashboard');
+    
+    // Add global functions for bill and expense trackers
+    window.changeTab = changeTab;
+    window.deleteIncome = deleteIncome;
+  </script>
+</body>
+</html>
