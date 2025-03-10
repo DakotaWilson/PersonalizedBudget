@@ -387,8 +387,16 @@
     
     function formatDate(dateString) {
       if (!dateString) return "";
-      const date = new Date(dateString);
-      return date.toLocaleDateString();
+      // Fix timezone issues by handling the date string directly
+      if (dateString.includes('T')) {
+        // If it's an ISO string, create a date object
+        const date = new Date(dateString);
+        return date.toLocaleDateString();
+      } else {
+        // If it's a YYYY-MM-DD format, parse it directly to prevent timezone issues
+        const [year, month, day] = dateString.split('-').map(Number);
+        return new Date(year, month - 1, day).toLocaleDateString();
+      }
     }
     
     function formatDateTime(dateString) {
@@ -510,9 +518,23 @@
           <div class="space-y-3">
       `;
       
+      // Fix timezone issues when comparing dates
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Set to start of day
+      
       const upcomingBills = bills
-        .filter(bill => new Date(bill.dueDate) >= new Date())
-        .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
+        .filter(bill => {
+          // Parse date parts to create date object correctly
+          const [year, month, day] = bill.dueDate.split('-').map(Number);
+          const dueDate = new Date(year, month - 1, day);
+          return dueDate >= today;
+        })
+        .sort((a, b) => {
+          // Sort by due date
+          const [yearA, monthA, dayA] = a.dueDate.split('-').map(Number);
+          const [yearB, monthB, dayB] = b.dueDate.split('-').map(Number);
+          return new Date(yearA, monthA - 1, dayA) - new Date(yearB, monthB - 1, dayB);
+        })
         .slice(0, 5);
       
       if (upcomingBills.length > 0) {
@@ -610,11 +632,12 @@
         const finalSource = source === 'Other' ? (customSource || 'Other Income') : source;
         
         const newId = incomes.length > 0 ? Math.max(...incomes.map(i => i.id)) + 1 : 1;
+        // Ensure date is stored in YYYY-MM-DD format to prevent timezone issues
         const newIncome = {
           id: newId,
           source: finalSource,
           amount: Number(amount),
-          date: date
+          date: date // date input already provides YYYY-MM-DD format
         };
         
         incomes.push(newIncome);
@@ -656,8 +679,13 @@
               <tbody>
         `;
         
-        // Sort incomes by date (newest first)
-        const sortedIncomes = [...incomes].sort((a, b) => new Date(b.date) - new Date(a.date));
+        // Sort incomes by date (newest first) with timezone fix
+        const sortedIncomes = [...incomes].sort((a, b) => {
+          // Parse date parts to create date objects correctly
+          const [yearA, monthA, dayA] = a.date.split('-').map(Number);
+          const [yearB, monthB, dayB] = b.date.split('-').map(Number);
+          return new Date(yearB, monthB - 1, dayB) - new Date(yearA, monthA - 1, dayA);
+        });
         
         sortedIncomes.forEach(income => {
           html += `
@@ -760,11 +788,12 @@
         }
         
         const newId = bills.length > 0 ? Math.max(...bills.map(b => b.id)) + 1 : 1;
+        // Ensure date is stored in YYYY-MM-DD format to prevent timezone issues
         const newBill = {
           id: newId,
           name: name,
           amount: Number(amount),
-          dueDate: dueDate
+          dueDate: dueDate // date input already provides YYYY-MM-DD format
         };
         
         bills.push(newBill);
@@ -804,8 +833,13 @@
               <tbody>
         `;
         
-        // Sort bills by due date
-        const sortedBills = [...bills].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+        // Sort bills by due date (with timezone fix)
+        const sortedBills = [...bills].sort((a, b) => {
+          // Parse date parts to create date objects correctly
+          const [yearA, monthA, dayA] = a.dueDate.split('-').map(Number);
+          const [yearB, monthB, dayB] = b.dueDate.split('-').map(Number);
+          return new Date(yearA, monthA - 1, dayA) - new Date(yearB, monthB - 1, dayB);
+        });
         
         sortedBills.forEach(bill => {
           html += `
@@ -918,11 +952,12 @@
         }
         
         const newId = expenses.length > 0 ? Math.max(...expenses.map(e => e.id)) + 1 : 1;
+        // Ensure date is stored in YYYY-MM-DD format to prevent timezone issues
         const newExpense = {
           id: newId,
           category: category,
           amount: Number(amount),
-          date: date
+          date: date // date input already provides YYYY-MM-DD format
         };
         
         expenses.push(newExpense);
@@ -962,8 +997,13 @@
               <tbody>
         `;
         
-        // Sort expenses by date (newest first)
-        const sortedExpenses = [...expenses].sort((a, b) => new Date(b.date) - new Date(a.date));
+        // Sort expenses by date (newest first) with timezone fix
+        const sortedExpenses = [...expenses].sort((a, b) => {
+          // Parse date parts to create date objects correctly
+          const [yearA, monthA, dayA] = a.date.split('-').map(Number);
+          const [yearB, monthB, dayB] = b.date.split('-').map(Number);
+          return new Date(yearB, monthB - 1, dayB) - new Date(yearA, monthA - 1, dayA);
+        });
         
         sortedExpenses.forEach(expense => {
           html += `
