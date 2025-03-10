@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SMOOOOOSH <3 - Budget Tracker</title>
+  <title>Serpent's Vault - Budget Tracker</title>
   
   <!-- Add Tailwind CSS for styling -->
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
@@ -13,10 +13,48 @@
       background-color: #111827;
       color: #e5e7eb;
     }
+    .login-container {
+      max-width: 400px;
+      margin: 100px auto;
+      padding: 20px;
+      background-color: #1f2937;
+      border: 1px solid #065f46;
+      border-radius: 0.5rem;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .login-logo {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .login-title {
+      color: #6ee7b7;
+      font-size: 1.5rem;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    .login-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .login-button {
+      background-color: #065f46;
+      color: white;
+      padding: 0.5rem;
+      border: none;
+      border-radius: 0.25rem;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .login-button:hover {
+      background-color: #047857;
+    }
     .budget-app {
       max-width: 1200px;
       margin: 0 auto;
       padding: 20px;
+      display: none; /* Hidden by default until login */
     }
     .app-header {
       background-color: #065f46;
@@ -231,16 +269,44 @@
   </style>
 </head>
 <body>
-  <div class="budget-app">
+  <!-- Login Screen -->
+  <div id="login-screen" class="login-container">
+    <div class="login-logo">
+      <svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="mx-auto">
+        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="#6ee7b7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M2 17L12 22L22 17" stroke="#6ee7b7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M2 12L12 17L22 12" stroke="#6ee7b7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <h1 class="login-title">Serpent's Vault</h1>
+    <div class="login-form">
+      <div>
+        <label class="block text-sm font-medium mb-1 text-gray-300">Password</label>
+        <input type="password" id="password-input" class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white" placeholder="Enter password">
+      </div>
+      <button id="login-button" class="login-button">Enter the Vault</button>
+      <p id="login-error" class="text-red-400 text-center text-sm hidden">Incorrect password. Try again.</p>
+    </div>
+  </div>
+
+  <div class="budget-app" id="budget-app">
     <!-- Header -->
     <div class="app-header flex justify-between items-center">
       <div>
-        <h1 class="app-title">Ashley's Vault</h1>
-        <p class="app-subtitle">Master your finances with SMOOSH <3</p>
+        <h1 class="app-title">Serpent's Vault</h1>
+        <p class="app-subtitle">Master your finances with cunning</p>
       </div>
-      <button class="bg-gray-800 hover:bg-gray-700 text-green-300 py-2 px-4 rounded border border-green-500" onclick="showActivityLog()">
-        Activity Log
-      </button>
+      <div class="flex space-x-2">
+        <button class="bg-gray-800 hover:bg-gray-700 text-green-300 py-2 px-4 rounded border border-green-500" onclick="showDataManagement()">
+          Export/Import
+        </button>
+        <button class="bg-gray-800 hover:bg-gray-700 text-green-300 py-2 px-4 rounded border border-green-500" onclick="showActivityLog()">
+          Activity Log
+        </button>
+        <button class="bg-red-800 hover:bg-red-700 text-white py-2 px-4 rounded border border-red-500" onclick="logout()">
+          Logout
+        </button>
+      </div>
     </div>
     
     <!-- Navigation -->
@@ -271,21 +337,115 @@
         </div>
       </div>
     </div>
+    
+    <!-- Data Management Modal (Hidden by default) -->
+    <div id="data-management-modal" class="activity-log-modal" style="display: none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title">Data Management</h2>
+          <button class="modal-close" onclick="hideDataManagement()">&times;</button>
+        </div>
+        <div class="modal-body space-y-6">
+          <div>
+            <h3 class="text-lg font-medium text-green-300 mb-2">Export Your Data</h3>
+            <p class="text-gray-300 mb-3">Export your budget data to save or transfer to another device.</p>
+            <button id="export-data-btn" class="bg-green-700 hover:bg-green-600 text-white py-2 px-4 rounded">
+              Export Data
+            </button>
+          </div>
+          
+          <div class="border-t border-gray-700 pt-4">
+            <h3 class="text-lg font-medium text-green-300 mb-2">Import Data</h3>
+            <p class="text-gray-300 mb-3">Import previously exported budget data. This will replace your current data.</p>
+            <div class="mb-3">
+              <textarea id="import-data-textarea" class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white h-32" placeholder="Paste your exported data here..."></textarea>
+            </div>
+            <button id="import-data-btn" class="bg-yellow-700 hover:bg-yellow-600 text-white py-2 px-4 rounded">
+              Import Data
+            </button>
+            <p id="import-message" class="mt-2 text-sm"></p>
+          </div>
+          
+          <div class="border-t border-gray-700 pt-4">
+            <h3 class="text-lg font-medium text-red-300 mb-2">Reset Data</h3>
+            <p class="text-gray-300 mb-3">Warning: This will delete all your budget data and cannot be undone.</p>
+            <button id="reset-data-btn" class="bg-red-700 hover:bg-red-600 text-white py-2 px-4 rounded">
+              Reset All Data
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
-    // Data storage with localStorage
+    // Constants
+    const CORRECT_PASSWORD = "buns";
+    const VERSION = "1.0.0";
+    const APP_PREFIX = "serpentsVault_";
+    
+    // Data storage
     let incomes = [];
     let bills = [];
     let expenses = [];
     let activityLog = [];
-
+    
+    // Authentication state
+    let isAuthenticated = false;
+    
+    // Check login status
+    function checkLogin() {
+      const sessionAuth = sessionStorage.getItem(`${APP_PREFIX}auth`);
+      if (sessionAuth === "true") {
+        login(true);
+      }
+    }
+    
+    // Login function
+    function login(skipAuthentication) {
+      if (skipAuthentication || isAuthenticated) {
+        // Already authenticated via session
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('budget-app').style.display = 'block';
+        loadData();
+      } else {
+        const passwordInput = document.getElementById('password-input');
+        const loginError = document.getElementById('login-error');
+        
+        if (passwordInput.value === CORRECT_PASSWORD) {
+          isAuthenticated = true;
+          sessionStorage.setItem(`${APP_PREFIX}auth`, "true");
+          document.getElementById('login-screen').style.display = 'none';
+          document.getElementById('budget-app').style.display = 'block';
+          loadData();
+          
+          // Log successful login
+          logActivity(`Logged in successfully`, 'auth', {});
+        } else {
+          loginError.classList.remove('hidden');
+          passwordInput.value = '';
+          setTimeout(() => {
+            loginError.classList.add('hidden');
+          }, 3000);
+        }
+      }
+    }
+    
+    // Logout function
+    function logout() {
+      isAuthenticated = false;
+      sessionStorage.removeItem(`${APP_PREFIX}auth`);
+      document.getElementById('budget-app').style.display = 'none';
+      document.getElementById('login-screen').style.display = 'block';
+      document.getElementById('password-input').value = '';
+    }
+    
     // Load data from localStorage
     function loadData() {
-      const savedIncomes = localStorage.getItem('serpentsVault_incomes');
-      const savedBills = localStorage.getItem('serpentsVault_bills');
-      const savedExpenses = localStorage.getItem('serpentsVault_expenses');
-      const savedActivityLog = localStorage.getItem('serpentsVault_activityLog');
+      const savedIncomes = localStorage.getItem(`${APP_PREFIX}incomes`);
+      const savedBills = localStorage.getItem(`${APP_PREFIX}bills`);
+      const savedExpenses = localStorage.getItem(`${APP_PREFIX}expenses`);
+      const savedActivityLog = localStorage.getItem(`${APP_PREFIX}activityLog`);
       
       if (savedIncomes) incomes = JSON.parse(savedIncomes);
       if (savedBills) bills = JSON.parse(savedBills);
@@ -320,10 +480,108 @@
     
     // Save data to localStorage
     function saveData() {
-      localStorage.setItem('serpentsVault_incomes', JSON.stringify(incomes));
-      localStorage.setItem('serpentsVault_bills', JSON.stringify(bills));
-      localStorage.setItem('serpentsVault_expenses', JSON.stringify(expenses));
-      localStorage.setItem('serpentsVault_activityLog', JSON.stringify(activityLog));
+      localStorage.setItem(`${APP_PREFIX}incomes`, JSON.stringify(incomes));
+      localStorage.setItem(`${APP_PREFIX}bills`, JSON.stringify(bills));
+      localStorage.setItem(`${APP_PREFIX}expenses`, JSON.stringify(expenses));
+      localStorage.setItem(`${APP_PREFIX}activityLog`, JSON.stringify(activityLog));
+    }
+    
+    // Data export/import functions
+    function exportData() {
+      const exportData = {
+        version: VERSION,
+        timestamp: new Date().toISOString(),
+        data: {
+          incomes,
+          bills,
+          expenses,
+          activityLog
+        }
+      };
+      
+      const exportString = JSON.stringify(exportData);
+      
+      // Create a temporary textarea to copy the data
+      const tempTextarea = document.createElement('textarea');
+      tempTextarea.value = exportString;
+      document.body.appendChild(tempTextarea);
+      tempTextarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempTextarea);
+      
+      alert('Data exported and copied to clipboard!');
+      
+      // Log activity
+      logActivity('Data exported', 'export', {});
+    }
+    
+    function importData() {
+      const importTextarea = document.getElementById('import-data-textarea');
+      const importMessage = document.getElementById('import-message');
+      
+      try {
+        const importData = JSON.parse(importTextarea.value);
+        
+        if (!importData.version || !importData.data) {
+          throw new Error('Invalid data format');
+        }
+        
+        // Import the data
+        incomes = importData.data.incomes || [];
+        bills = importData.data.bills || [];
+        expenses = importData.data.expenses || [];
+        activityLog = importData.data.activityLog || [];
+        
+        // Add import event to activity log
+        logActivity('Data imported', 'import', { timestamp: importData.timestamp });
+        
+        // Save the imported data
+        saveData();
+        
+        // Update the UI
+        changeTab('dashboard');
+        
+        importMessage.textContent = 'Data imported successfully!';
+        importMessage.className = 'mt-2 text-sm text-green-400';
+        
+        // Clear the textarea
+        importTextarea.value = '';
+        
+        setTimeout(() => {
+          hideDataManagement();
+        }, 1000);
+      } catch (error) {
+        importMessage.textContent = 'Error: Invalid data format';
+        importMessage.className = 'mt-2 text-sm text-red-400';
+      }
+    }
+    
+    function resetData() {
+      if (confirm('Are you sure you want to reset all data? This cannot be undone.')) {
+        incomes = [];
+        bills = [];
+        expenses = [];
+        
+        // Keep the current activity log and add reset event
+        logActivity('Data reset', 'reset', {});
+        
+        // Load sample data
+        loadData();
+        
+        // Update the UI
+        changeTab('dashboard');
+        
+        hideDataManagement();
+      }
+    }
+    
+    // Data management modal functions
+    function showDataManagement() {
+      document.getElementById('data-management-modal').style.display = 'flex';
+    }
+    
+    function hideDataManagement() {
+      document.getElementById('data-management-modal').style.display = 'none';
     }
     
     // Log activity
@@ -1057,11 +1315,25 @@
     
     // Initialize
     document.addEventListener('DOMContentLoaded', function() {
-      // Load data from localStorage
-      loadData();
+      // Check if user is already logged in
+      checkLogin();
       
-      // Initialize with dashboard
-      changeTab('dashboard');
+      // Initialize login button
+      document.getElementById('login-button').addEventListener('click', function() {
+        login(false);
+      });
+      
+      // Allow Enter key to submit login
+      document.getElementById('password-input').addEventListener('keyup', function(event) {
+        if (event.key === 'Enter') {
+          login(false);
+        }
+      });
+      
+      // Initialize data management buttons
+      document.getElementById('export-data-btn').addEventListener('click', exportData);
+      document.getElementById('import-data-btn').addEventListener('click', importData);
+      document.getElementById('reset-data-btn').addEventListener('click', resetData);
     });
     
     // Add global functions
@@ -1071,6 +1343,9 @@
     window.deleteExpense = deleteExpense;
     window.showActivityLog = showActivityLog;
     window.hideActivityLog = hideActivityLog;
+    window.showDataManagement = showDataManagement;
+    window.hideDataManagement = hideDataManagement;
+    window.logout = logout;
   </script>
 </body>
 </html>
