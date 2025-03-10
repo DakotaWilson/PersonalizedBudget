@@ -166,6 +166,68 @@
     .btn-red:hover {
       background-color: #991b1b;
     }
+    .activity-log-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+    }
+    .modal-content {
+      background-color: #1f2937;
+      border: 1px solid #065f46;
+      border-radius: 0.5rem;
+      width: 90%;
+      max-width: 600px;
+      max-height: 80vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .modal-header {
+      background-color: #065f46;
+      padding: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #059669;
+    }
+    .modal-title {
+      color: #6ee7b7;
+      font-size: 1.25rem;
+      font-weight: bold;
+    }
+    .modal-close {
+      color: #6ee7b7;
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+    .modal-body {
+      padding: 1rem;
+      overflow-y: auto;
+      max-height: 60vh;
+    }
+    .log-entry {
+      background-color: #374151;
+      border-radius: 0.375rem;
+      padding: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+    .log-date {
+      font-size: 0.75rem;
+      color: #9ca3af;
+      margin-bottom: 0.25rem;
+    }
+    .log-action {
+      color: #e5e7eb;
+    }
   </style>
 </head>
 <body>
@@ -176,7 +238,7 @@
         <h1 class="app-title">Serpent's Vault</h1>
         <p class="app-subtitle">Master your finances with cunning</p>
       </div>
-      <button class="bg-gray-800 hover:bg-gray-700 text-green-300 py-2 px-4 rounded border border-green-500" onclick="alert('Activity log feature will be added soon!')">
+      <button class="bg-gray-800 hover:bg-gray-700 text-green-300 py-2 px-4 rounded border border-green-500" onclick="showActivityLog()">
         Activity Log
       </button>
     </div>
@@ -193,24 +255,127 @@
     <div id="content">
       <!-- Dashboard content will be loaded here -->
     </div>
+
+    <!-- Activity Log Modal (Hidden by default) -->
+    <div id="activity-log-modal" class="activity-log-modal" style="display: none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title">Activity Log</h2>
+          <button class="modal-close" onclick="hideActivityLog()">&times;</button>
+        </div>
+        <div id="activity-log-content" class="modal-body">
+          <!-- Activity log entries will be loaded here -->
+        </div>
+        <div class="p-4 border-t border-gray-700">
+          <button class="w-full bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded" onclick="hideActivityLog()">Close</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
-    // Sample data
-    const incomes = [
-      { id: 1, source: "Doctor Care", amount: 1500, date: "2025-02-25" },
-      { id: 2, source: "CORE", amount: 300, date: "2025-03-07" }
-    ];
+    // Data storage with localStorage
+    let incomes = [];
+    let bills = [];
+    let expenses = [];
+    let activityLog = [];
+
+    // Load data from localStorage
+    function loadData() {
+      const savedIncomes = localStorage.getItem('serpentsVault_incomes');
+      const savedBills = localStorage.getItem('serpentsVault_bills');
+      const savedExpenses = localStorage.getItem('serpentsVault_expenses');
+      const savedActivityLog = localStorage.getItem('serpentsVault_activityLog');
+      
+      if (savedIncomes) incomes = JSON.parse(savedIncomes);
+      if (savedBills) bills = JSON.parse(savedBills);
+      if (savedExpenses) expenses = JSON.parse(savedExpenses);
+      if (savedActivityLog) activityLog = JSON.parse(savedActivityLog);
+      
+      // If no data exists, load sample data
+      if (incomes.length === 0) {
+        incomes = [
+          { id: 1, source: "Doctor Care", amount: 1500, date: "2025-02-25" },
+          { id: 2, source: "CORE", amount: 300, date: "2025-03-07" }
+        ];
+      }
+      
+      if (bills.length === 0) {
+        bills = [
+          { id: 1, name: "Rent", amount: 1200, dueDate: "2025-03-01" },
+          { id: 2, name: "Internet", amount: 100, dueDate: "2025-03-11" }
+        ];
+      }
+      
+      if (expenses.length === 0) {
+        expenses = [
+          { id: 1, category: "Groceries", amount: 120, date: "2025-03-05" },
+          { id: 2, category: "Shopping", amount: 45, date: "2025-03-01" }
+        ];
+      }
+      
+      // Save the sample data
+      saveData();
+    }
     
-    const bills = [
-      { id: 1, name: "Rent", amount: 1200, dueDate: "2025-03-01" },
-      { id: 2, name: "Internet", amount: 100, dueDate: "2025-03-11" }
-    ];
+    // Save data to localStorage
+    function saveData() {
+      localStorage.setItem('serpentsVault_incomes', JSON.stringify(incomes));
+      localStorage.setItem('serpentsVault_bills', JSON.stringify(bills));
+      localStorage.setItem('serpentsVault_expenses', JSON.stringify(expenses));
+      localStorage.setItem('serpentsVault_activityLog', JSON.stringify(activityLog));
+    }
     
-    const expenses = [
-      { id: 1, category: "Groceries", amount: 120, date: "2025-03-05" },
-      { id: 2, category: "Shopping", amount: 45, date: "2025-03-01" }
-    ];
+    // Log activity
+    function logActivity(action, type, details) {
+      const newLog = {
+        id: activityLog.length > 0 ? Math.max(...activityLog.map(log => log.id)) + 1 : 1,
+        timestamp: new Date().toISOString(),
+        action,
+        type,
+        details
+      };
+      
+      activityLog.unshift(newLog); // Add to beginning
+      
+      // Limit log size to 100 entries
+      if (activityLog.length > 100) {
+        activityLog = activityLog.slice(0, 100);
+      }
+      
+      saveData();
+    }
+    
+    // Activity log functions
+    function showActivityLog() {
+      const modal = document.getElementById('activity-log-modal');
+      const logContent = document.getElementById('activity-log-content');
+      
+      modal.style.display = 'flex';
+      
+      if (activityLog.length === 0) {
+        logContent.innerHTML = `<p class="text-gray-400 text-center">No activity recorded yet</p>`;
+        return;
+      }
+      
+      let html = `<div class="space-y-3">`;
+      
+      activityLog.forEach(log => {
+        html += `
+          <div class="log-entry">
+            <div class="log-date">${formatDateTime(log.timestamp)}</div>
+            <div class="log-action">${log.action}</div>
+          </div>
+        `;
+      });
+      
+      html += `</div>`;
+      logContent.innerHTML = html;
+    }
+    
+    function hideActivityLog() {
+      document.getElementById('activity-log-modal').style.display = 'none';
+    }
     
     // Format helpers
     function formatCurrency(amount) {
@@ -224,6 +389,12 @@
       if (!dateString) return "";
       const date = new Date(dateString);
       return date.toLocaleDateString();
+    }
+    
+    function formatDateTime(dateString) {
+      if (!dateString) return "";
+      const date = new Date(dateString);
+      return date.toLocaleString();
     }
     
     // Calculate totals
@@ -439,12 +610,20 @@
         const finalSource = source === 'Other' ? (customSource || 'Other Income') : source;
         
         const newId = incomes.length > 0 ? Math.max(...incomes.map(i => i.id)) + 1 : 1;
-        incomes.push({
+        const newIncome = {
           id: newId,
           source: finalSource,
           amount: Number(amount),
           date: date
-        });
+        };
+        
+        incomes.push(newIncome);
+        
+        // Log activity
+        logActivity(`Added income: ${finalSource} - ${formatCurrency(amount)}`, 'income', newIncome);
+        
+        // Save data
+        saveData();
         
         // Reset form
         sourceSelect.value = 'Doctor Care';
@@ -477,7 +656,10 @@
               <tbody>
         `;
         
-        incomes.forEach(income => {
+        // Sort incomes by date (newest first)
+        const sortedIncomes = [...incomes].sort((a, b) => new Date(b.date) - new Date(a.date));
+        
+        sortedIncomes.forEach(income => {
           html += `
             <tr class="border-b border-gray-700">
               <td class="p-2 text-gray-300">${income.source}</td>
@@ -506,19 +688,349 @@
     
     // Delete income
     function deleteIncome(id) {
+      const incomeToDelete = incomes.find(i => i.id === id);
       const index = incomes.findIndex(i => i.id === id);
+      
       if (index !== -1) {
         incomes.splice(index, 1);
+        
+        // Log activity
+        logActivity(`Deleted income: ${incomeToDelete.source} - ${formatCurrency(incomeToDelete.amount)}`, 'delete', incomeToDelete);
+        
+        // Save data
+        saveData();
+        
         renderIncomeList();
+        
+        // If we're on the dashboard, update it too
+        if (document.getElementById('tab-dashboard').classList.contains('active')) {
+          renderDashboard(document.getElementById('content'));
+        }
+      }
+    }
+
+    // Render bill tracker
+    function renderBillTracker(container) {
+      let html = `
+        <div class="card">
+          <h2 class="card-title">Add New Bill</h2>
+          <div class="form-grid">
+            <div>
+              <label class="form-label">Bill Name</label>
+              <input type="text" id="bill-name" class="form-input" placeholder="Bill name">
+            </div>
+            
+            <div>
+              <label class="form-label">Amount</label>
+              <input type="number" id="bill-amount" class="form-input" placeholder="0.00">
+            </div>
+            
+            <div>
+              <label class="form-label">Due Date</label>
+              <input type="date" id="bill-due-date" class="form-input">
+            </div>
+          </div>
+          <div class="mt-4">
+            <button id="add-bill-btn" class="btn btn-yellow">Add Bill</button>
+          </div>
+        </div>
+        
+        <div class="card">
+          <h2 class="card-title">Bill List</h2>
+          <div id="bill-list">
+            <!-- Bill entries will be added here -->
+          </div>
+        </div>
+      `;
+      
+      container.innerHTML = html;
+      
+      // Render bill list
+      renderBillList();
+      
+      // Add bill button event
+      document.getElementById('add-bill-btn').addEventListener('click', function() {
+        const name = document.getElementById('bill-name').value;
+        const amount = document.getElementById('bill-amount').value;
+        const dueDate = document.getElementById('bill-due-date').value;
+        
+        if (!name || !amount || !dueDate) {
+          alert('Please fill in all required fields');
+          return;
+        }
+        
+        const newId = bills.length > 0 ? Math.max(...bills.map(b => b.id)) + 1 : 1;
+        const newBill = {
+          id: newId,
+          name: name,
+          amount: Number(amount),
+          dueDate: dueDate
+        };
+        
+        bills.push(newBill);
+        
+        // Log activity
+        logActivity(`Added bill: ${name} - ${formatCurrency(amount)}`, 'bill', newBill);
+        
+        // Save data
+        saveData();
+        
+        // Reset form
+        document.getElementById('bill-name').value = '';
+        document.getElementById('bill-amount').value = '';
+        document.getElementById('bill-due-date').value = '';
+        
+        // Update bill list
+        renderBillList();
+      });
+    }
+    
+    // Render bill list
+    function renderBillList() {
+      const container = document.getElementById('bill-list');
+      
+      if (bills.length > 0) {
+        let html = `
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead>
+                <tr class="text-left border-b border-gray-700">
+                  <th class="p-2 text-gray-300">Bill Name</th>
+                  <th class="p-2 text-gray-300">Due Date</th>
+                  <th class="p-2 text-right text-gray-300">Amount</th>
+                  <th class="p-2 text-center text-gray-300">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
+        
+        // Sort bills by due date
+        const sortedBills = [...bills].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+        
+        sortedBills.forEach(bill => {
+          html += `
+            <tr class="border-b border-gray-700">
+              <td class="p-2 text-gray-300">${bill.name}</td>
+              <td class="p-2 text-gray-300">${formatDate(bill.dueDate)}</td>
+              <td class="p-2 text-right text-yellow-300">${formatCurrency(bill.amount)}</td>
+              <td class="p-2 text-center">
+                <button class="text-red-400 hover:text-red-300" onclick="deleteBill(${bill.id})">
+                  Delete
+                </button>
+              </td>
+            </tr>
+          `;
+        });
+        
+        html += `
+              </tbody>
+            </table>
+          </div>
+        `;
+        
+        container.innerHTML = html;
+      } else {
+        container.innerHTML = `<p class="text-gray-400">No bills yet</p>`;
       }
     }
     
-    // Initialize with dashboard
-    changeTab('dashboard');
+    // Delete bill
+    function deleteBill(id) {
+      const billToDelete = bills.find(b => b.id === id);
+      const index = bills.findIndex(b => b.id === id);
+      
+      if (index !== -1) {
+        bills.splice(index, 1);
+        
+        // Log activity
+        logActivity(`Deleted bill: ${billToDelete.name} - ${formatCurrency(billToDelete.amount)}`, 'delete', billToDelete);
+        
+        // Save data
+        saveData();
+        
+        renderBillList();
+        
+        // If we're on the dashboard, update it too
+        if (document.getElementById('tab-dashboard').classList.contains('active')) {
+          renderDashboard(document.getElementById('content'));
+        }
+      }
+    }
     
-    // Add global functions for bill and expense trackers
+    // Render expense tracker
+    function renderExpenseTracker(container) {
+      let html = `
+        <div class="card">
+          <h2 class="card-title">Add New Expense</h2>
+          <div class="form-grid">
+            <div>
+              <label class="form-label">Category</label>
+              <select id="expense-category" class="form-select">
+                <option value="">Select a category</option>
+                <option value="Groceries">Groceries</option>
+                <option value="Dining">Dining</option>
+                <option value="Transportation">Transportation</option>
+                <option value="Shopping">Shopping</option>
+                <option value="Entertainment">Entertainment</option>
+                <option value="Healthcare">Healthcare</option>
+                <option value="Utilities">Utilities</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            
+            <div>
+              <label class="form-label">Amount</label>
+              <input type="number" id="expense-amount" class="form-input" placeholder="0.00">
+            </div>
+            
+            <div>
+              <label class="form-label">Date</label>
+              <input type="date" id="expense-date" class="form-input">
+            </div>
+          </div>
+          <div class="mt-4">
+            <button id="add-expense-btn" class="btn btn-red">Add Expense</button>
+          </div>
+        </div>
+        
+        <div class="card">
+          <h2 class="card-title">Expense History</h2>
+          <div id="expense-list">
+            <!-- Expense entries will be added here -->
+          </div>
+        </div>
+      `;
+      
+      container.innerHTML = html;
+      
+      // Render expense list
+      renderExpenseList();
+      
+      // Add expense button event
+      document.getElementById('add-expense-btn').addEventListener('click', function() {
+        const category = document.getElementById('expense-category').value;
+        const amount = document.getElementById('expense-amount').value;
+        const date = document.getElementById('expense-date').value;
+        
+        if (!category || !amount || !date) {
+          alert('Please fill in all required fields');
+          return;
+        }
+        
+        const newId = expenses.length > 0 ? Math.max(...expenses.map(e => e.id)) + 1 : 1;
+        const newExpense = {
+          id: newId,
+          category: category,
+          amount: Number(amount),
+          date: date
+        };
+        
+        expenses.push(newExpense);
+        
+        // Log activity
+        logActivity(`Added expense: ${category} - ${formatCurrency(amount)}`, 'expense', newExpense);
+        
+        // Save data
+        saveData();
+        
+        // Reset form
+        document.getElementById('expense-category').value = '';
+        document.getElementById('expense-amount').value = '';
+        document.getElementById('expense-date').value = '';
+        
+        // Update expense list
+        renderExpenseList();
+      });
+    }
+    
+    // Render expense list
+    function renderExpenseList() {
+      const container = document.getElementById('expense-list');
+      
+      if (expenses.length > 0) {
+        let html = `
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead>
+                <tr class="text-left border-b border-gray-700">
+                  <th class="p-2 text-gray-300">Category</th>
+                  <th class="p-2 text-gray-300">Date</th>
+                  <th class="p-2 text-right text-gray-300">Amount</th>
+                  <th class="p-2 text-center text-gray-300">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
+        
+        // Sort expenses by date (newest first)
+        const sortedExpenses = [...expenses].sort((a, b) => new Date(b.date) - new Date(a.date));
+        
+        sortedExpenses.forEach(expense => {
+          html += `
+            <tr class="border-b border-gray-700">
+              <td class="p-2 text-gray-300">${expense.category}</td>
+              <td class="p-2 text-gray-300">${formatDate(expense.date)}</td>
+              <td class="p-2 text-right text-red-300">${formatCurrency(expense.amount)}</td>
+              <td class="p-2 text-center">
+                <button class="text-red-400 hover:text-red-300" onclick="deleteExpense(${expense.id})">
+                  Delete
+                </button>
+              </td>
+            </tr>
+          `;
+        });
+        
+        html += `
+              </tbody>
+            </table>
+          </div>
+        `;
+        
+        container.innerHTML = html;
+      } else {
+        container.innerHTML = `<p class="text-gray-400">No expenses yet</p>`;
+      }
+    }
+    
+    // Delete expense
+    function deleteExpense(id) {
+      const expenseToDelete = expenses.find(e => e.id === id);
+      const index = expenses.findIndex(e => e.id === id);
+      
+      if (index !== -1) {
+        expenses.splice(index, 1);
+        
+        // Log activity
+        logActivity(`Deleted expense: ${expenseToDelete.category} - ${formatCurrency(expenseToDelete.amount)}`, 'delete', expenseToDelete);
+        
+        // Save data
+        saveData();
+        
+        renderExpenseList();
+        
+        // If we're on the dashboard, update it too
+        if (document.getElementById('tab-dashboard').classList.contains('active')) {
+          renderDashboard(document.getElementById('content'));
+        }
+      }
+    }
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+      // Load data from localStorage
+      loadData();
+      
+      // Initialize with dashboard
+      changeTab('dashboard');
+    });
+    
+    // Add global functions
     window.changeTab = changeTab;
     window.deleteIncome = deleteIncome;
+    window.deleteBill = deleteBill;
+    window.deleteExpense = deleteExpense;
+    window.showActivityLog = showActivityLog;
+    window.hideActivityLog = hideActivityLog;
   </script>
 </body>
 </html>
