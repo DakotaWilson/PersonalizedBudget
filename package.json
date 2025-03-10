@@ -1,0 +1,23 @@
+{
+  "name": "serpents-vault",
+  "version": "1.0.0",
+  "description": "Budget tracking application with Firebase cloud storage",
+  "main": "app.js",
+  "scripts": {
+    "start": "serve .",
+    "build": "mkdir -p dist && cp -r index.html app.js styles.css dist/",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "dependencies": {
+    "firebase": "^9.22.0"
+  },
+  "devDependencies": {
+    "serve": "^14.2.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "private": true,
+  "author": "",
+  "license": "MIT"
+}
