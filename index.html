@@ -263,8 +263,21 @@
       color: #9ca3af;
       margin-bottom: 0.25rem;
     }
-    .log-action {
-      color: #e5e7eb;
+    .save-indicator {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background-color: rgba(6, 95, 70, 0.8);
+      color: #6ee7b7;
+      padding: 8px 16px;
+      border-radius: 4px;
+      font-size: 14px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      z-index: 100;
+    }
+    .save-indicator.visible {
+      opacity: 1;
     }
   </style>
 </head>
@@ -277,7 +290,9 @@
         <path d="M2 17L12 22L22 17" stroke="#6ee7b7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         <path d="M2 12L12 17L22 12" stroke="#6ee7b7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
-    </div>
+    <div id="save-indicator" class="save-indicator">
+    Data saved
+  </div>
     <h1 class="login-title">Serpent's Vault</h1>
     <div class="login-form">
       <div>
@@ -408,6 +423,7 @@
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('budget-app').style.display = 'block';
         loadData();
+        startAutoSave(); // Start auto-save after login
       } else {
         const passwordInput = document.getElementById('password-input');
         const loginError = document.getElementById('login-error');
@@ -418,6 +434,7 @@
           document.getElementById('login-screen').style.display = 'none';
           document.getElementById('budget-app').style.display = 'block';
           loadData();
+          startAutoSave(); // Start auto-save after login
           
           // Log successful login
           logActivity(`Logged in successfully`, 'auth', {});
@@ -438,6 +455,7 @@
       document.getElementById('budget-app').style.display = 'none';
       document.getElementById('login-screen').style.display = 'block';
       document.getElementById('password-input').value = '';
+      stopAutoSave(); // Stop auto-save on logout
     }
     
     // Load data from localStorage
@@ -478,12 +496,48 @@
       saveData();
     }
     
-    // Save data to localStorage
-    function saveData() {
+    // Auto-save timer for backup
+    let autoSaveInterval = null;
+    const AUTO_SAVE_MINUTES = 2; // Auto-save every 2 minutes
+    
+    // Save data to localStorage with visual indicator
+    function saveData(showIndicator = true) {
       localStorage.setItem(`${APP_PREFIX}incomes`, JSON.stringify(incomes));
       localStorage.setItem(`${APP_PREFIX}bills`, JSON.stringify(bills));
       localStorage.setItem(`${APP_PREFIX}expenses`, JSON.stringify(expenses));
       localStorage.setItem(`${APP_PREFIX}activityLog`, JSON.stringify(activityLog));
+      
+      // Show save indicator if requested
+      if (showIndicator) {
+        const indicator = document.getElementById('save-indicator');
+        indicator.classList.add('visible');
+        
+        // Hide after 2 seconds
+        setTimeout(() => {
+          indicator.classList.remove('visible');
+        }, 2000);
+      }
+    }
+    
+    // Start auto-save timer
+    function startAutoSave() {
+      // Clear any existing interval
+      if (autoSaveInterval) {
+        clearInterval(autoSaveInterval);
+      }
+      
+      // Set up auto-save every few minutes
+      autoSaveInterval = setInterval(() => {
+        saveData(false); // Save without indicator
+      }, AUTO_SAVE_MINUTES * 60 * 1000);
+    }
+    
+    // Stop auto-save timer
+    function stopAutoSave() {
+      if (autoSaveInterval) {
+        clearInterval(autoSaveInterval);
+        autoSaveInterval = null;
+      }
     }
     
     // Data export/import functions
@@ -625,7 +679,7 @@
             <div class="log-action">${log.action}</div>
           </div>
         `;
-      });
+      window.logout = logout;
       
       html += `</div>`;
       logContent.innerHTML = html;
@@ -1345,7 +1399,12 @@
     window.hideActivityLog = hideActivityLog;
     window.showDataManagement = showDataManagement;
     window.hideDataManagement = hideDataManagement;
-    window.logout = logout;
+    // Handle page unload (save before closing)
+    window.addEventListener('beforeunload', function() {
+      if (isAuthenticated) {
+        saveData(false);
+      }
+    });
   </script>
 </body>
 </html>
