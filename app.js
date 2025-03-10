@@ -1,11 +1,12 @@
 // Firebase Configuration
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyDWoRetxkIjcr2IFtaDzy6O86QID5AgHvw",
+  authDomain: "budgetcalc-b5f98.firebaseapp.com",
+  projectId: "budgetcalc-b5f98",
+  storageBucket: "budgetcalc-b5f98.firebasestorage.app",
+  messagingSenderId: "696280368169",
+  appId: "1:696280368169:web:812c497f97343ef1064838",
+  measurementId: "G-DYR1LH8VVB"
 };
 
 // Initialize Firebase
