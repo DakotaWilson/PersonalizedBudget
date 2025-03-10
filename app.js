@@ -1,12 +1,11 @@
 // Firebase Configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyDWoRetxkIjcr2IFtaDzy6O86QID5AgHvw",
-  authDomain: "budgetcalc-b5f98.firebaseapp.com",
-  projectId: "budgetcalc-b5f98",
-  storageBucket: "budgetcalc-b5f98.firebasestorage.app",
-  messagingSenderId: "696280368169",
-  appId: "1:696280368169:web:812c497f97343ef1064838",
-  measurementId: "G-DYR1LH8VVB"
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_STORAGE_BUCKET",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_APP_ID"
 };
 
 // Initialize Firebase
@@ -835,13 +834,14 @@ function renderExpenseTracker(container) {
           <label class="form-label">Category</label>
           <select id="expense-category" class="form-select">
             <option value="">Select a category</option>
+            <option value="Eating out">Eating out</option>
             <option value="Groceries">Groceries</option>
-            <option value="Dining">Dining</option>
-            <option value="Transportation">Transportation</option>
+            <option value="Gas">Gas</option>
+            <option value="Kyliee">Kyliee</option>
+            <option value="Personal care">Personal care</option>
             <option value="Shopping">Shopping</option>
-            <option value="Entertainment">Entertainment</option>
-            <option value="Healthcare">Healthcare</option>
-            <option value="Utilities">Utilities</option>
+            <option value="Pets">Pets</option>
+            <option value="Gifts">Gifts</option>
             <option value="Other">Other</option>
           </select>
         </div>
