@@ -15,12 +15,22 @@ const db = firebase.firestore();
 const auth = firebase.auth();
 
 // Constants
-const VERSION = "2.0.0";
+const VERSION = "2.1.0";
 const COLLECTIONS = {
   INCOMES: "incomes",
   BILLS: "bills",
   EXPENSES: "expenses",
   ACTIVITY_LOG: "activityLog"
+};
+
+// Recurrence pattern options
+const RECURRENCE_PATTERNS = {
+  NONE: "none",
+  MONTHLY: "monthly",
+  WEEKLY: "weekly",
+  BIWEEKLY: "biweekly",
+  QUARTERLY: "quarterly",
+  YEARLY: "yearly"
 };
 
 // Data storage
@@ -109,8 +119,8 @@ async function initializeUserData(userId) {
     ];
     
     const sampleBills = [
-      { id: generateId(), name: "Rent", amount: 1200, dueDate: "2025-03-01" },
-      { id: generateId(), name: "Internet", amount: 100, dueDate: "2025-03-11" }
+      { id: generateId(), name: "Rent", amount: 1200, dueDate: "2025-03-01", paid: false, recurring: true, recurrencePattern: RECURRENCE_PATTERNS.MONTHLY },
+      { id: generateId(), name: "Internet", amount: 100, dueDate: "2025-03-11", paid: false, recurring: false, recurrencePattern: RECURRENCE_PATTERNS.NONE }
     ];
     
     const sampleExpenses = [
@@ -179,6 +189,14 @@ async function loadData() {
     const billsSnapshot = await db.collection(`users/${userId}/${COLLECTIONS.BILLS}`).get();
     bills = billsSnapshot.docs.map(doc => doc.data());
     
+    // Ensure all bills have paid status and recurring properties
+    bills = bills.map(bill => ({
+      ...bill,
+      paid: bill.paid !== undefined ? bill.paid : false,
+      recurring: bill.recurring !== undefined ? bill.recurring : false,
+      recurrencePattern: bill.recurrencePattern || RECURRENCE_PATTERNS.NONE
+    }));
+    
     // Load expenses
     const expensesSnapshot = await db.collection(`users/${userId}/${COLLECTIONS.EXPENSES}`).get();
     expenses = expensesSnapshot.docs.map(doc => doc.data());
@@ -229,6 +247,48 @@ async function logActivity(action, type, details = {}) {
   } catch (error) {
     console.error("Error logging activity:", error);
   }
+}
+
+// Generate next recurring bill based on recurrence pattern
+function generateNextRecurringBill(bill) {
+  const [year, month, day] = bill.dueDate.split('-').map(Number);
+  
+  // Create a new bill object
+  const newBill = {
+    ...bill,
+    id: generateId(),
+    paid: false
+  };
+  
+  // Calculate the next due date based on recurrence pattern
+  const dueDate = new Date(year, month - 1, day);
+  
+  switch (bill.recurrencePattern) {
+    case RECURRENCE_PATTERNS.MONTHLY:
+      dueDate.setMonth(dueDate.getMonth() + 1);
+      break;
+    case RECURRENCE_PATTERNS.WEEKLY:
+      dueDate.setDate(dueDate.getDate() + 7);
+      break;
+    case RECURRENCE_PATTERNS.BIWEEKLY:
+      dueDate.setDate(dueDate.getDate() + 14);
+      break;
+    case RECURRENCE_PATTERNS.QUARTERLY:
+      dueDate.setMonth(dueDate.getMonth() + 3);
+      break;
+    case RECURRENCE_PATTERNS.YEARLY:
+      dueDate.setFullYear(dueDate.getFullYear() + 1);
+      break;
+    default:
+      return null; // Return null if not recurring
+  }
+  
+  // Format the new due date
+  const nextMonth = String(dueDate.getMonth() + 1).padStart(2, '0');
+  const nextDay = String(dueDate.getDate()).padStart(2, '0');
+  newBill.dueDate = `${dueDate.getFullYear()}-${nextMonth}-${nextDay}`;
+  
+  return newBill;
 }
 
 // Show the save indicator
@@ -292,11 +352,20 @@ function formatDateTime(dateString) {
 // Calculate totals
 function calculateTotals() {
   const totalIncome = incomes.reduce((sum, item) => sum + Number(item.amount), 0);
-  const totalBills = bills.reduce((sum, item) => sum + Number(item.amount), 0);
+  
+  // Calculate total for unpaid bills only
+  const totalBills = bills
+    .filter(bill => !bill.paid)
+    .reduce((sum, item) => sum + Number(item.amount), 0);
+    
   const totalExpenses = expenses.reduce((sum, item) => sum + Number(item.amount), 0);
   const balance = totalIncome - totalBills - totalExpenses;
   
-  return { totalIncome, totalBills, totalExpenses, balance };
+  const totalPaidBills = bills
+    .filter(bill => bill.paid)
+    .reduce((sum, item) => sum + Number(item.amount), 0);
+  
+  return { totalIncome, totalBills, totalExpenses, balance, totalPaidBills };
 }
 
 // Group expenses by category
@@ -336,7 +405,7 @@ function changeTab(tabName) {
 
 // Render dashboard
 function renderDashboard(container) {
-  const { totalIncome, totalBills, totalExpenses, balance } = calculateTotals();
+  const { totalIncome, totalBills, totalExpenses, balance, totalPaidBills } = calculateTotals();
   const expensesByCategory = getExpensesByCategory();
   
   let html = `
@@ -348,7 +417,7 @@ function renderDashboard(container) {
           <p class="stat-value income-value">${formatCurrency(totalIncome)}</p>
         </div>
         <div class="stat-card">
-          <h3 class="stat-label bills-label">Bills</h3>
+          <h3 class="stat-label bills-label">Unpaid Bills</h3>
           <p class="stat-value bills-value">${formatCurrency(totalBills)}</p>
         </div>
         <div class="stat-card">
@@ -360,6 +429,18 @@ function renderDashboard(container) {
           <p class="stat-value ${balance >= 0 ? 'balance-value-positive' : 'balance-value-negative'}">
             ${formatCurrency(balance)}
           </p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="card">
+      <h2 class="card-title">Bills Status</h2>
+      <div class="flex justify-between mb-4">
+        <div>
+          <h3 class="text-yellow-300 font-medium">Unpaid: ${formatCurrency(totalBills)}</h3>
+        </div>
+        <div>
+          <h3 class="text-green-300 font-medium">Paid: ${formatCurrency(totalPaidBills)}</h3>
         </div>
       </div>
     </div>
@@ -408,6 +489,9 @@ function renderDashboard(container) {
   
   const upcomingBills = bills
     .filter(bill => {
+      // Filter out paid bills
+      if (bill.paid) return false;
+      
       // Parse date parts to create date object correctly
       const [year, month, day] = bill.dueDate.split('-').map(Number);
       const dueDate = new Date(year, month - 1, day);
@@ -423,13 +507,24 @@ function renderDashboard(container) {
   
   if (upcomingBills.length > 0) {
     upcomingBills.forEach(bill => {
+      const recurringIcon = bill.recurring ? 
+        `<span class="ml-2 text-blue-300" title="${bill.recurrencePattern}">↻</span>` : '';
+        
       html += `
         <div class="flex justify-between border-b border-gray-700 pb-2">
           <div>
-            <div class="font-medium text-gray-300">${bill.name}</div>
+            <div class="font-medium text-gray-300">
+              ${bill.name}${recurringIcon}
+            </div>
             <div class="text-sm text-gray-400">Due: ${formatDate(bill.dueDate)}</div>
           </div>
-          <div class="text-yellow-300 font-medium">${formatCurrency(bill.amount)}</div>
+          <div class="flex items-center">
+            <div class="text-yellow-300 font-medium mr-4">${formatCurrency(bill.amount)}</div>
+            <button class="bg-green-800 hover:bg-green-700 text-white px-2 py-1 rounded text-sm" 
+              onclick="toggleBillPaid('${bill.id}', true)">
+              Mark Paid
+            </button>
+          </div>
         </div>
       `;
     });
@@ -667,6 +762,23 @@ function renderBillTracker(container) {
           <input type="date" id="bill-due-date" class="form-input">
         </div>
       </div>
+      
+      <div class="mt-4 flex items-center mb-4">
+        <input type="checkbox" id="bill-recurring" class="mr-2 h-4 w-4 text-blue-600">
+        <label for="bill-recurring" class="form-label mb-0">Recurring Bill</label>
+      </div>
+      
+      <div id="recurrence-options" class="mb-4" style="display: none;">
+        <label class="form-label">Recurrence Pattern</label>
+        <select id="recurrence-pattern" class="form-select">
+          <option value="${RECURRENCE_PATTERNS.MONTHLY}">Monthly</option>
+          <option value="${RECURRENCE_PATTERNS.WEEKLY}">Weekly</option>
+          <option value="${RECURRENCE_PATTERNS.BIWEEKLY}">Bi-weekly</option>
+          <option value="${RECURRENCE_PATTERNS.QUARTERLY}">Quarterly</option>
+          <option value="${RECURRENCE_PATTERNS.YEARLY}">Yearly</option>
+        </select>
+      </div>
+      
       <div class="mt-4">
         <button id="add-bill-btn" class="btn btn-yellow">Add Bill</button>
       </div>
@@ -674,6 +786,15 @@ function renderBillTracker(container) {
     
     <div class="card">
       <h2 class="card-title">Bill List</h2>
+      <div class="mb-4">
+        <div class="flex justify-between items-center mb-2">
+          <div class="flex">
+            <button id="show-all-bills" class="bg-gray-700 text-white px-3 py-1 rounded-l active-filter">All</button>
+            <button id="show-unpaid-bills" class="bg-gray-700 text-white px-3 py-1">Unpaid</button>
+            <button id="show-paid-bills" class="bg-gray-700 text-white px-3 py-1 rounded-r">Paid</button>
+          </div>
+        </div>
+      </div>
       <div id="bill-list">
         <!-- Bill entries will be added here -->
       </div>
@@ -682,14 +803,48 @@ function renderBillTracker(container) {
   
   container.innerHTML = html;
   
-  // Render bill list
-  renderBillList();
+  // Show/hide recurrence options
+  const recurringCheckbox = document.getElementById('bill-recurring');
+  const recurrenceOptions = document.getElementById('recurrence-options');
+  
+  recurringCheckbox.addEventListener('change', function() {
+    recurrenceOptions.style.display = this.checked ? 'block' : 'none';
+  });
+  
+  // Add bill filter buttons
+  document.getElementById('show-all-bills').addEventListener('click', function() {
+    document.getElementById('show-all-bills').classList.add('active-filter');
+    document.getElementById('show-unpaid-bills').classList.remove('active-filter');
+    document.getElementById('show-paid-bills').classList.remove('active-filter');
+    renderBillList('all');
+  });
+  
+  document.getElementById('show-unpaid-bills').addEventListener('click', function() {
+    document.getElementById('show-all-bills').classList.remove('active-filter');
+    document.getElementById('show-unpaid-bills').classList.add('active-filter');
+    document.getElementById('show-paid-bills').classList.remove('active-filter');
+    renderBillList('unpaid');
+  });
+  
+  document.getElementById('show-paid-bills').addEventListener('click', function() {
+    document.getElementById('show-all-bills').classList.remove('active-filter');
+    document.getElementById('show-unpaid-bills').classList.remove('active-filter');
+    document.getElementById('show-paid-bills').classList.add('active-filter');
+    renderBillList('paid');
+  });
+  
+  // Render bill list (default to all)
+  renderBillList('all');
   
   // Add bill button event
   document.getElementById('add-bill-btn').addEventListener('click', async function() {
     const name = document.getElementById('bill-name').value;
     const amount = document.getElementById('bill-amount').value;
     const dueDate = document.getElementById('bill-due-date').value;
+    const recurring = document.getElementById('bill-recurring').checked;
+    const recurrencePattern = recurring 
+      ? document.getElementById('recurrence-pattern').value 
+      : RECURRENCE_PATTERNS.NONE;
     
     if (!name || !amount || !dueDate) {
       alert('Please fill in all required fields');
@@ -700,7 +855,10 @@ function renderBillTracker(container) {
       id: generateId(),
       name: name,
       amount: Number(amount),
-      dueDate: dueDate // date input already provides YYYY-MM-DD format
+      dueDate: dueDate, // date input already provides YYYY-MM-DD format
+      paid: false,
+      recurring: recurring,
+      recurrencePattern: recurrencePattern
     };
     
     try {
@@ -713,17 +871,20 @@ function renderBillTracker(container) {
       bills.push(newBill);
       
       // Log activity
-      await logActivity(`Added bill: ${name} - ${formatCurrency(newBill.amount)}`, 'bill', newBill);
+      await logActivity(`Added ${recurring ? 'recurring' : ''} bill: ${name} - ${formatCurrency(newBill.amount)}`, 'bill', newBill);
       
       // Reset form
       document.getElementById('bill-name').value = '';
       document.getElementById('bill-amount').value = '';
       document.getElementById('bill-due-date').value = '';
+      document.getElementById('bill-recurring').checked = false;
+      document.getElementById('recurrence-pattern').value = RECURRENCE_PATTERNS.MONTHLY;
+      recurrenceOptions.style.display = 'none';
       
       hideLoading();
       
       // Update bill list
-      renderBillList();
+      renderBillList('all');
     } catch (error) {
       hideLoading();
       console.error("Error adding bill:", error);
@@ -732,11 +893,19 @@ function renderBillTracker(container) {
   });
 }
 
-// Render bill list
-function renderBillList() {
+// Render bill list with filter option
+function renderBillList(filter = 'all') {
   const container = document.getElementById('bill-list');
   
-  if (bills.length > 0) {
+  // Filter bills based on the selected filter
+  let filteredBills = [...bills];
+  if (filter === 'paid') {
+    filteredBills = filteredBills.filter(bill => bill.paid);
+  } else if (filter === 'unpaid') {
+    filteredBills = filteredBills.filter(bill => !bill.paid);
+  }
+  
+  if (filteredBills.length > 0) {
     let html = `
       <div class="overflow-x-auto">
         <table class="w-full">
@@ -744,6 +913,7 @@ function renderBillList() {
             <tr class="text-left border-b border-gray-700">
               <th class="p-2 text-gray-300">Bill Name</th>
               <th class="p-2 text-gray-300">Due Date</th>
+              <th class="p-2 text-gray-300">Status</th>
               <th class="p-2 text-right text-gray-300">Amount</th>
               <th class="p-2 text-center text-gray-300">Actions</th>
             </tr>
@@ -752,7 +922,7 @@ function renderBillList() {
     `;
     
     // Sort bills by due date (with timezone fix)
-    const sortedBills = [...bills].sort((a, b) => {
+    const sortedBills = filteredBills.sort((a, b) => {
       // Parse date parts to create date objects correctly
       const [yearA, monthA, dayA] = a.dueDate.split('-').map(Number);
       const [yearB, monthB, dayB] = b.dueDate.split('-').map(Number);
@@ -760,15 +930,37 @@ function renderBillList() {
     });
     
     sortedBills.forEach(bill => {
+      // Add recurring icon if bill is recurring
+      const recurringIcon = bill.recurring ? 
+        `<span class="ml-2 text-blue-300" title="${bill.recurrencePattern}">↻</span>` : '';
+        
       html += `
         <tr class="border-b border-gray-700">
-          <td class="p-2 text-gray-300">${bill.name}</td>
+          <td class="p-2 text-gray-300">${bill.name}${recurringIcon}</td>
           <td class="p-2 text-gray-300">${formatDate(bill.dueDate)}</td>
+          <td class="p-2">
+            <span class="${bill.paid ? 'text-green-300' : 'text-yellow-300'}">
+              ${bill.paid ? 'Paid' : 'Unpaid'}
+            </span>
+          </td>
           <td class="p-2 text-right text-yellow-300">${formatCurrency(bill.amount)}</td>
           <td class="p-2 text-center">
-            <button class="text-red-400 hover:text-red-300" onclick="deleteBill('${bill.id}')">
-              Delete
-            </button>
+            <div class="flex justify-end space-x-2">
+              ${!bill.paid ? `
+                <button class="bg-green-800 hover:bg-green-700 text-white px-2 py-1 rounded text-sm" 
+                  onclick="toggleBillPaid('${bill.id}', true)">
+                  Mark Paid
+                </button>
+              ` : `
+                <button class="bg-yellow-800 hover:bg-yellow-700 text-white px-2 py-1 rounded text-sm" 
+                  onclick="toggleBillPaid('${bill.id}', false)">
+                  Mark Unpaid
+                </button>
+              `}
+              <button class="text-red-400 hover:text-red-300" onclick="deleteBill('${bill.id}')">
+                Delete
+              </button>
+            </div>
           </td>
         </tr>
       `;
@@ -782,7 +974,73 @@ function renderBillList() {
     
     container.innerHTML = html;
   } else {
-    container.innerHTML = `<p class="text-gray-400">No bills yet</p>`;
+    container.innerHTML = `<p class="text-gray-400">No ${filter === 'all' ? '' : filter} bills yet</p>`;
+  }
+}
+
+// Toggle bill paid status
+async function toggleBillPaid(id, paidStatus) {
+  if (!currentUser) return;
+  
+  try {
+    showLoading();
+    
+    // Find the bill to update
+    const billIndex = bills.findIndex(b => b.id === id);
+    if (billIndex === -1) {
+      hideLoading();
+      return;
+    }
+    
+    const bill = bills[billIndex];
+    
+    // Update the bill
+    bill.paid = paidStatus;
+    
+    // Update in Firestore
+    await db.collection(`users/${currentUser.uid}/${COLLECTIONS.BILLS}`).doc(id).update({ paid: paidStatus });
+    
+    // Log activity
+    await logActivity(`Marked bill ${bill.name} as ${paidStatus ? 'paid' : 'unpaid'} - ${formatCurrency(bill.amount)}`, 'bill', bill);
+    
+    // Create next recurring bill if this one was paid and it's recurring
+    if (paidStatus && bill.recurring) {
+      const nextBill = generateNextRecurringBill(bill);
+      if (nextBill) {
+        // Add to Firestore
+        await db.collection(`users/${currentUser.uid}/${COLLECTIONS.BILLS}`).doc(nextBill.id).set(nextBill);
+        
+        // Add to local array
+        bills.push(nextBill);
+        
+        // Log activity
+        await logActivity(`Created next recurring bill: ${nextBill.name} - ${formatCurrency(nextBill.amount)}`, 'bill', nextBill);
+      }
+    }
+    
+    hideLoading();
+    
+    // Update UI based on which tab we're on
+    if (document.getElementById('tab-bills').classList.contains('active')) {
+      // Find which filter is active
+      const filterButtons = ['show-all-bills', 'show-unpaid-bills', 'show-paid-bills'];
+      const activeButton = filterButtons.find(id => document.getElementById(id).classList.contains('active-filter'));
+      
+      let filterType = 'all';
+      if (activeButton === 'show-unpaid-bills') filterType = 'unpaid';
+      if (activeButton === 'show-paid-bills') filterType = 'paid';
+      
+      renderBillList(filterType);
+    }
+    
+    // If we're on the dashboard, update it too
+    if (document.getElementById('tab-dashboard').classList.contains('active')) {
+      renderDashboard(document.getElementById('content'));
+    }
+  } catch (error) {
+    hideLoading();
+    console.error("Error updating bill:", error);
+    alert("Failed to update bill. Please try again.");
   }
 }
 
@@ -811,8 +1069,18 @@ async function deleteBill(id) {
     
     hideLoading();
     
-    // Update UI
-    renderBillList();
+    // Update UI based on which tab we're on
+    if (document.getElementById('tab-bills').classList.contains('active')) {
+      // Find which filter is active
+      const filterButtons = ['show-all-bills', 'show-unpaid-bills', 'show-paid-bills'];
+      const activeButton = filterButtons.find(id => document.getElementById(id).classList.contains('active-filter'));
+      
+      let filterType = 'all';
+      if (activeButton === 'show-unpaid-bills') filterType = 'unpaid';
+      if (activeButton === 'show-paid-bills') filterType = 'paid';
+      
+      renderBillList(filterType);
+    }
     
     // If we're on the dashboard, update it too
     if (document.getElementById('tab-dashboard').classList.contains('active')) {
@@ -1108,3 +1376,4 @@ window.deleteExpense = deleteExpense;
 window.showActivityLog = showActivityLog;
 window.hideActivityLog = hideActivityLog;
 window.logout = logout;
+window.toggleBillPaid = toggleBillPaid;
