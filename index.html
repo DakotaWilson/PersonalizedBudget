@@ -309,8 +309,6 @@
       100% { transform: rotate(360deg); }
     }
 
-    /* New styles for Bill Status Display and Recurring Bills */
-    
     /* Bill status filter buttons */
     .active-filter {
       background-color: #065f46 !important;
@@ -438,6 +436,135 @@
 
     .mark-unpaid-btn:hover {
       background-color: #92400e;
+    }
+
+    /* Calendar Styling */
+    .calendar-container {
+      border: 1px solid #374151;
+      border-radius: 0.375rem;
+      overflow: hidden;
+    }
+
+    .calendar-header {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      background-color: #374151;
+      border-bottom: 1px solid #4b5563;
+    }
+
+    .calendar-day-header {
+      padding: 0.5rem;
+      text-align: center;
+      font-weight: 500;
+      font-size: 0.875rem;
+      color: #9ca3af;
+    }
+
+    .calendar-body {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      grid-auto-rows: minmax(80px, auto);
+    }
+
+    .calendar-day {
+      border-right: 1px solid #374151;
+      border-bottom: 1px solid #374151;
+      padding: 0.5rem;
+      position: relative;
+      min-height: 80px;
+    }
+
+    .calendar-day:nth-child(7n) {
+      border-right: none;
+    }
+
+    .calendar-day-empty {
+      background-color: #1a202c;
+      border-right: 1px solid #374151;
+      border-bottom: 1px solid #374151;
+    }
+
+    .calendar-day-number {
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+      color: #d1d5db;
+    }
+
+    .calendar-day-today {
+      background-color: rgba(6, 95, 70, 0.1);
+    }
+
+    .calendar-day-today .calendar-day-number {
+      background-color: #065f46;
+      color: white;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+    }
+
+    .calendar-day-has-bills {
+      background-color: rgba(180, 83, 9, 0.05);
+    }
+
+    .calendar-day-amount {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #fcd34d;
+      margin-bottom: 0.25rem;
+    }
+
+    .calendar-day-bills {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .calendar-day-bill {
+      font-size: 0.75rem;
+      padding: 0.1rem 0.25rem;
+      border-radius: 0.25rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .bill-paid {
+      background-color: rgba(6, 95, 70, 0.2);
+      color: #6ee7b7;
+    }
+
+    .bill-unpaid {
+      background-color: rgba(180, 83, 9, 0.2);
+      color: #fcd34d;
+    }
+
+    .calendar-day-more {
+      font-size: 0.75rem;
+      color: #9ca3af;
+      margin-top: 0.25rem;
+    }
+
+    .calendar-nav-btn {
+      background-color: #374151;
+      color: #d1d5db;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border: none;
+      font-weight: bold;
+    }
+
+    .calendar-nav-btn:hover {
+      background-color: #4b5563;
+      color: white;
     }
   </style>
 </head>
