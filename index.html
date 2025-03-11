@@ -308,6 +308,137 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
+
+    /* New styles for Bill Status Display and Recurring Bills */
+    
+    /* Bill status filter buttons */
+    .active-filter {
+      background-color: #065f46 !important;
+      color: #6ee7b7 !important;
+    }
+
+    /* Styling for bill status and paid indicators */
+    .paid-indicator-yes {
+      color: #6ee7b7;
+      font-weight: 500;
+    }
+
+    .paid-indicator-no {
+      color: #fcd34d;
+      font-weight: 500;
+    }
+
+    /* Styling for recurring icon */
+    .recurring-icon {
+      color: #93c5fd;
+      font-size: 1rem;
+      margin-left: 0.5rem;
+    }
+
+    /* Enhanced bill card for dashboard */
+    .bill-card {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.75rem;
+      border-bottom: 1px solid #374151;
+    }
+
+    .bill-card:last-child {
+      border-bottom: none;
+    }
+
+    .bill-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .bill-title {
+      display: flex;
+      align-items: center;
+      font-weight: 500;
+      color: #e5e7eb;
+    }
+
+    .bill-date {
+      font-size: 0.875rem;
+      color: #9ca3af;
+    }
+
+    .bill-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .bill-amount {
+      font-weight: 500;
+      margin-right: 0.5rem;
+    }
+
+    .paid-tag {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+    }
+
+    .paid-tag-yes {
+      background-color: rgba(6, 95, 70, 0.2);
+      color: #6ee7b7;
+    }
+
+    .paid-tag-no {
+      background-color: rgba(180, 83, 9, 0.2);
+      color: #fcd34d;
+    }
+
+    /* Bill tabs styling */
+    .bill-tab-container {
+      display: flex;
+      border-bottom: 1px solid #374151;
+      margin-bottom: 1rem;
+    }
+
+    .bill-tab {
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s ease;
+    }
+
+    .bill-tab.active {
+      border-bottom-color: #6ee7b7;
+      color: #6ee7b7;
+    }
+
+    /* Mark as paid/unpaid button */
+    .toggle-paid-btn {
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .mark-paid-btn {
+      background-color: #065f46;
+      color: white;
+    }
+
+    .mark-paid-btn:hover {
+      background-color: #047857;
+    }
+
+    .mark-unpaid-btn {
+      background-color: #b45309;
+      color: white;
+    }
+
+    .mark-unpaid-btn:hover {
+      background-color: #92400e;
+    }
   </style>
 </head>
 <body>
