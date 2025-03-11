@@ -15,7 +15,7 @@ const db = firebase.firestore();
 const auth = firebase.auth();
 
 // Constants
-const VERSION = "2.1.0";
+const VERSION = "2.2.0";
 const COLLECTIONS = {
   INCOMES: "incomes",
   BILLS: "bills",
@@ -32,6 +32,15 @@ const RECURRENCE_PATTERNS = {
   QUARTERLY: "quarterly",
   YEARLY: "yearly"
 };
+
+// Month names
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+
+// Day names
+const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 // Data storage
 let incomes = [];
@@ -349,6 +358,41 @@ function formatDateTime(dateString) {
   return date.toLocaleString();
 }
 
+// Calendar helper functions
+function getDaysInMonth(year, month) {
+  return new Date(year, month + 1, 0).getDate();
+}
+
+function getFirstDayOfMonth(year, month) {
+  return new Date(year, month, 1).getDay();
+}
+
+function getPreviousMonth(year, month) {
+  if (month === 0) {
+    return { year: year - 1, month: 11 };
+  }
+  return { year, month: month - 1 };
+}
+
+function getNextMonth(year, month) {
+  if (month === 11) {
+    return { year: year + 1, month: 0 };
+  }
+  return { year, month: month + 1 };
+}
+
+function getBillsForDay(year, month, day) {
+  const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  
+  return bills.filter(bill => {
+    // Check if this bill falls on the specified date
+    if (bill.dueDate === dateString) {
+      return true;
+    }
+    return false;
+  });
+}
+
 // Calculate totals
 function calculateTotals() {
   const totalIncome = incomes.reduce((sum, item) => sum + Number(item.amount), 0);
@@ -408,6 +452,15 @@ function renderDashboard(container) {
   const { totalIncome, totalBills, totalExpenses, balance, totalPaidBills } = calculateTotals();
   const expensesByCategory = getExpensesByCategory();
   
+  // Initialize with current month and year
+  const currentDate = new Date();
+  const currentYear = currentDate.getFullYear();
+  const currentMonth = currentDate.getMonth();
+  
+  // Store month and year as data attributes for use in navigation
+  container.dataset.calendarYear = currentYear;
+  container.dataset.calendarMonth = currentMonth;
+  
   let html = `
     <div class="card">
       <h2 class="card-title">Financial Summary</h2>
@@ -434,13 +487,83 @@ function renderDashboard(container) {
     </div>
     
     <div class="card">
-      <h2 class="card-title">Bills Status</h2>
-      <div class="flex justify-between mb-4">
-        <div>
-          <h3 class="text-yellow-300 font-medium">Unpaid: ${formatCurrency(totalBills)}</h3>
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="card-title m-0">Bills Calendar</h2>
+        <div class="flex items-center">
+          <button id="prev-month" class="calendar-nav-btn">❮</button>
+          <h3 id="calendar-title" class="text-gray-300 mx-4">${MONTH_NAMES[currentMonth]} ${currentYear}</h3>
+          <button id="next-month" class="calendar-nav-btn">❯</button>
         </div>
-        <div>
-          <h3 class="text-green-300 font-medium">Paid: ${formatCurrency(totalPaidBills)}</h3>
+      </div>
+      <div id="bills-calendar" class="calendar-container">
+        <div class="calendar-header">
+          ${DAY_NAMES.map(day => `<div class="calendar-day-header">${day}</div>`).join('')}
+        </div>
+        <div class="calendar-body">
+  `;
+  
+  // Generate calendar days
+  const daysInMonth = getDaysInMonth(currentYear, currentMonth);
+  const firstDayOfMonth = getFirstDayOfMonth(currentYear, currentMonth);
+  
+  // Add empty cells for days before the first day of the month
+  for (let i = 0; i < firstDayOfMonth; i++) {
+    html += `<div class="calendar-day calendar-day-empty"></div>`;
+  }
+  
+  // Add calendar days
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dayBills = getBillsForDay(currentYear, currentMonth, day);
+    const hasUnpaidBills = dayBills.some(bill => !bill.paid);
+    const totalDayAmount = dayBills.reduce((sum, bill) => sum + Number(bill.amount), 0);
+    
+    let dayClass = "calendar-day";
+    if (hasUnpaidBills) {
+      dayClass += " calendar-day-has-bills";
+    }
+    
+    // Check if it's today
+    const isToday = currentYear === currentDate.getFullYear() && 
+                    currentMonth === currentDate.getMonth() && 
+                    day === currentDate.getDate();
+    
+    if (isToday) {
+      dayClass += " calendar-day-today";
+    }
+    
+    html += `
+      <div class="${dayClass}">
+        <div class="calendar-day-number">${day}</div>
+    `;
+    
+    if (dayBills.length > 0) {
+      html += `<div class="calendar-day-amount">${formatCurrency(totalDayAmount)}</div>`;
+      
+      // Display bills on this day (maximum 2 to avoid overflow)
+      const shownBills = dayBills.slice(0, 2);
+      html += `<div class="calendar-day-bills">`;
+      
+      shownBills.forEach(bill => {
+        const isPaid = bill.paid;
+        html += `
+          <div class="calendar-day-bill ${isPaid ? 'bill-paid' : 'bill-unpaid'}"
+               title="${bill.name}: ${formatCurrency(bill.amount)} (${isPaid ? 'Paid' : 'Unpaid'})">
+            ${bill.name.length > 8 ? bill.name.substring(0, 6) + '...' : bill.name}
+          </div>
+        `;
+      });
+      
+      if (dayBills.length > 2) {
+        html += `<div class="calendar-day-more">+${dayBills.length - 2} more</div>`;
+      }
+      
+      html += `</div>`;
+    }
+    
+    html += `</div>`;
+  }
+  
+  html += `
         </div>
       </div>
     </div>
@@ -538,6 +661,108 @@ function renderDashboard(container) {
   `;
   
   container.innerHTML = html;
+  
+  // Add event listeners for calendar navigation
+  document.getElementById('prev-month').addEventListener('click', function() {
+    navigateCalendar(container, 'prev');
+  });
+  
+  document.getElementById('next-month').addEventListener('click', function() {
+    navigateCalendar(container, 'next');
+  });
+}
+
+// Navigate the calendar
+function navigateCalendar(container, direction) {
+  let year = parseInt(container.dataset.calendarYear);
+  let month = parseInt(container.dataset.calendarMonth);
+  
+  if (direction === 'prev') {
+    const prev = getPreviousMonth(year, month);
+    year = prev.year;
+    month = prev.month;
+  } else if (direction === 'next') {
+    const next = getNextMonth(year, month);
+    year = next.year;
+    month = next.month;
+  }
+  
+  // Update data attributes
+  container.dataset.calendarYear = year;
+  container.dataset.calendarMonth = month;
+  
+  // Update calendar title
+  document.getElementById('calendar-title').textContent = `${MONTH_NAMES[month]} ${year}`;
+  
+  // Regenerate calendar body
+  const calendarBody = document.querySelector('.calendar-body');
+  let html = '';
+  
+  // Generate calendar days
+  const daysInMonth = getDaysInMonth(year, month);
+  const firstDayOfMonth = getFirstDayOfMonth(year, month);
+  
+  // Add empty cells for days before the first day of the month
+  for (let i = 0; i < firstDayOfMonth; i++) {
+    html += `<div class="calendar-day calendar-day-empty"></div>`;
+  }
+  
+  // Get the current date for today highlighting
+  const currentDate = new Date();
+  
+  // Add calendar days
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dayBills = getBillsForDay(year, month, day);
+    const hasUnpaidBills = dayBills.some(bill => !bill.paid);
+    const totalDayAmount = dayBills.reduce((sum, bill) => sum + Number(bill.amount), 0);
+    
+    let dayClass = "calendar-day";
+    if (hasUnpaidBills) {
+      dayClass += " calendar-day-has-bills";
+    }
+    
+    // Check if it's today
+    const isToday = year === currentDate.getFullYear() && 
+                    month === currentDate.getMonth() && 
+                    day === currentDate.getDate();
+    
+    if (isToday) {
+      dayClass += " calendar-day-today";
+    }
+    
+    html += `
+      <div class="${dayClass}">
+        <div class="calendar-day-number">${day}</div>
+    `;
+    
+    if (dayBills.length > 0) {
+      html += `<div class="calendar-day-amount">${formatCurrency(totalDayAmount)}</div>`;
+      
+      // Display bills on this day (maximum 2 to avoid overflow)
+      const shownBills = dayBills.slice(0, 2);
+      html += `<div class="calendar-day-bills">`;
+      
+      shownBills.forEach(bill => {
+        const isPaid = bill.paid;
+        html += `
+          <div class="calendar-day-bill ${isPaid ? 'bill-paid' : 'bill-unpaid'}"
+               title="${bill.name}: ${formatCurrency(bill.amount)} (${isPaid ? 'Paid' : 'Unpaid'})">
+            ${bill.name.length > 8 ? bill.name.substring(0, 6) + '...' : bill.name}
+          </div>
+        `;
+      });
+      
+      if (dayBills.length > 2) {
+        html += `<div class="calendar-day-more">+${dayBills.length - 2} more</div>`;
+      }
+      
+      html += `</div>`;
+    }
+    
+    html += `</div>`;
+  }
+  
+  calendarBody.innerHTML = html;
 }
 
 // Render income tracker
