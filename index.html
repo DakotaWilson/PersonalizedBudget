@@ -688,6 +688,41 @@
         </div>
       </div>
     </div>
+    
+    <!-- Edit Notes Modal (Hidden by default) -->
+    <div id="edit-notes-modal" class="activity-log-modal" style="display: none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title">Edit Expense Notes</h2>
+          <button class="modal-close" onclick="hideEditNotesModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="edit-expense-id">
+          <div class="mb-4">
+            <div class="grid grid-cols-3 gap-2 mb-4">
+              <div>
+                <label class="block text-sm font-medium mb-1 text-gray-300">Category</label>
+                <div id="edit-notes-category" class="text-gray-300 font-medium"></div>
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1 text-gray-300">Amount</label>
+                <div id="edit-notes-amount" class="text-yellow-300 font-medium"></div>
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1 text-gray-300">Date</label>
+                <div id="edit-notes-date" class="text-gray-300"></div>
+              </div>
+            </div>
+            <label class="block text-sm font-medium mb-1 text-gray-300">Notes</label>
+            <textarea id="edit-notes-textarea" class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white h-32" placeholder="Enter notes for this expense"></textarea>
+          </div>
+        </div>
+        <div class="p-4 border-t border-gray-700 flex justify-end space-x-3">
+          <button class="bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded" onclick="hideEditNotesModal()">Cancel</button>
+          <button class="bg-blue-700 hover:bg-blue-600 text-white py-2 px-4 rounded" onclick="saveExpenseNotes()">Save Notes</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- App JavaScript -->
