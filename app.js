@@ -1481,12 +1481,19 @@ function renderExpenseList() {
         <tr class="border-b border-gray-700">
           <td class="p-2 text-gray-300">${expense.category}</td>
           <td class="p-2 text-gray-300">${formatDate(expense.date)}</td>
-          <td class="p-2 text-gray-400">${notesDisplay}</td>
+          <td class="p-2 text-gray-400">
+            <div class="note-text" title="${expense.notes}">${notesDisplay}</div>
+          </td>
           <td class="p-2 text-right ${amountClass}">${formatCurrency(expense.amount)}</td>
           <td class="p-2 text-center">
-            <button class="text-red-400 hover:text-red-300" onclick="deleteExpense('${expense.id}')">
-              Delete
-            </button>
+            <div class="flex justify-end space-x-2">
+              <button class="text-blue-400 hover:text-blue-300" onclick="editExpenseNotes('${expense.id}')">
+                Edit
+              </button>
+              <button class="text-red-400 hover:text-red-300" onclick="deleteExpense('${expense.id}')">
+                Delete
+              </button>
+            </div>
           </td>
         </tr>
       `;
@@ -1502,6 +1509,75 @@ function renderExpenseList() {
   } else {
     container.innerHTML = `<p class="text-gray-400">No expenses yet</p>`;
   }
+}
+
+// Edit expense notes
+function editExpenseNotes(id) {
+  // Find the expense
+  const expense = expenses.find(e => e.id === id);
+  if (!expense) return;
+  
+  // Show the edit notes modal
+  const modal = document.getElementById('edit-notes-modal');
+  const notesTextarea = document.getElementById('edit-notes-textarea');
+  const expenseIdField = document.getElementById('edit-expense-id');
+  
+  // Set the current notes and expense ID
+  notesTextarea.value = expense.notes || '';
+  expenseIdField.value = id;
+  
+  // Display the expense info in the modal
+  document.getElementById('edit-notes-category').textContent = expense.category;
+  document.getElementById('edit-notes-amount').textContent = formatCurrency(expense.amount);
+  document.getElementById('edit-notes-date').textContent = formatDate(expense.date);
+  
+  // Show the modal
+  modal.style.display = 'flex';
+}
+
+// Save updated notes
+async function saveExpenseNotes() {
+  if (!currentUser) return;
+  
+  try {
+    showLoading();
+    
+    const id = document.getElementById('edit-expense-id').value;
+    const newNotes = document.getElementById('edit-notes-textarea').value.trim();
+    
+    // Find the expense
+    const expenseIndex = expenses.findIndex(e => e.id === id);
+    if (expenseIndex === -1) {
+      hideLoading();
+      return;
+    }
+    
+    // Update the notes
+    expenses[expenseIndex].notes = newNotes;
+    
+    // Update in Firestore
+    await db.collection(`users/${currentUser.uid}/${COLLECTIONS.EXPENSES}`).doc(id).update({ notes: newNotes });
+    
+    // Log activity
+    await logActivity(`Updated notes for expense: ${expenses[expenseIndex].category}`, 'expense', expenses[expenseIndex]);
+    
+    hideLoading();
+    
+    // Hide the modal
+    hideEditNotesModal();
+    
+    // Update UI
+    renderExpenseList();
+  } catch (error) {
+    hideLoading();
+    console.error("Error updating expense notes:", error);
+    alert("Failed to update notes. Please try again.");
+  }
+}
+
+// Hide edit notes modal
+function hideEditNotesModal() {
+  document.getElementById('edit-notes-modal').style.display = 'none';
 }
 
 // Delete expense
@@ -1637,3 +1713,6 @@ window.showActivityLog = showActivityLog;
 window.hideActivityLog = hideActivityLog;
 window.logout = logout;
 window.toggleBillPaid = toggleBillPaid;
+window.editExpenseNotes = editExpenseNotes;
+window.saveExpenseNotes = saveExpenseNotes;
+window.hideEditNotesModal = hideEditNotesModal;
