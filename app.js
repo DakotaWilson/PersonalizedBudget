@@ -15,7 +15,7 @@ const db = firebase.firestore();
 const auth = firebase.auth();
 
 // Constants
-const VERSION = "2.2.0";
+const VERSION = "2.3.0";
 const COLLECTIONS = {
   INCOMES: "incomes",
   BILLS: "bills",
@@ -133,8 +133,9 @@ async function initializeUserData(userId) {
     ];
     
     const sampleExpenses = [
-      { id: generateId(), category: "Groceries", amount: 120, date: "2025-03-05" },
-      { id: generateId(), category: "Shopping", amount: 45, date: "2025-03-01" }
+      { id: generateId(), category: "Groceries", amount: 120, date: "2025-03-05", notes: "Weekly grocery shopping" },
+      { id: generateId(), category: "Shopping", amount: 45, date: "2025-03-01", notes: "New clothes" },
+      { id: generateId(), category: "Savings", amount: 200, date: "2025-03-02", notes: "Monthly savings deposit" }
     ];
 
     // Check if user already has data
@@ -209,6 +210,12 @@ async function loadData() {
     // Load expenses
     const expensesSnapshot = await db.collection(`users/${userId}/${COLLECTIONS.EXPENSES}`).get();
     expenses = expensesSnapshot.docs.map(doc => doc.data());
+    
+    // Ensure all expenses have notes field
+    expenses = expenses.map(expense => ({
+      ...expense,
+      notes: expense.notes || ""
+    }));
     
     // Load activity log
     const activityLogSnapshot = await db.collection(`users/${userId}/${COLLECTIONS.ACTIVITY_LOG}`)
@@ -409,7 +416,12 @@ function calculateTotals() {
     .filter(bill => bill.paid)
     .reduce((sum, item) => sum + Number(item.amount), 0);
   
-  return { totalIncome, totalBills, totalExpenses, balance, totalPaidBills };
+  // Calculate total savings
+  const totalSavings = expenses
+    .filter(expense => expense.category === "Savings")
+    .reduce((sum, item) => sum + Number(item.amount), 0);
+  
+  return { totalIncome, totalBills, totalExpenses, balance, totalPaidBills, totalSavings };
 }
 
 // Group expenses by category
@@ -449,7 +461,7 @@ function changeTab(tabName) {
 
 // Render dashboard
 function renderDashboard(container) {
-  const { totalIncome, totalBills, totalExpenses, balance, totalPaidBills } = calculateTotals();
+  const { totalIncome, totalBills, totalExpenses, balance, totalPaidBills, totalSavings } = calculateTotals();
   const expensesByCategory = getExpensesByCategory();
   
   // Initialize with current month and year
@@ -483,6 +495,14 @@ function renderDashboard(container) {
             ${formatCurrency(balance)}
           </p>
         </div>
+      </div>
+    </div>
+    
+    <div class="card">
+      <h2 class="card-title">Savings Summary</h2>
+      <div class="stat-card w-full">
+        <h3 class="stat-label balance-label">Total Savings</h3>
+        <p class="stat-value balance-value-positive">${formatCurrency(totalSavings)}</p>
       </div>
     </div>
     
@@ -1336,6 +1356,7 @@ function renderExpenseTracker(container) {
             <option value="Shopping">Shopping</option>
             <option value="Pets">Pets</option>
             <option value="Gifts">Gifts</option>
+            <option value="Savings">Savings</option>
             <option value="Other">Other</option>
           </select>
         </div>
@@ -1350,6 +1371,12 @@ function renderExpenseTracker(container) {
           <input type="date" id="expense-date" class="form-input">
         </div>
       </div>
+      
+      <div class="mt-4">
+        <label class="form-label">Notes</label>
+        <textarea id="expense-notes" class="form-input h-20" placeholder="Add notes about this expense (optional)"></textarea>
+      </div>
+      
       <div class="mt-4">
         <button id="add-expense-btn" class="btn btn-red">Add Expense</button>
       </div>
@@ -1373,6 +1400,7 @@ function renderExpenseTracker(container) {
     const category = document.getElementById('expense-category').value;
     const amount = document.getElementById('expense-amount').value;
     const date = document.getElementById('expense-date').value;
+    const notes = document.getElementById('expense-notes').value.trim();
     
     if (!category || !amount || !date) {
       alert('Please fill in all required fields');
@@ -1383,7 +1411,8 @@ function renderExpenseTracker(container) {
       id: generateId(),
       category: category,
       amount: Number(amount),
-      date: date // date input already provides YYYY-MM-DD format
+      date: date, // date input already provides YYYY-MM-DD format
+      notes: notes
     };
     
     try {
@@ -1402,6 +1431,7 @@ function renderExpenseTracker(container) {
       document.getElementById('expense-category').value = '';
       document.getElementById('expense-amount').value = '';
       document.getElementById('expense-date').value = '';
+      document.getElementById('expense-notes').value = '';
       
       hideLoading();
       
@@ -1427,6 +1457,7 @@ function renderExpenseList() {
             <tr class="text-left border-b border-gray-700">
               <th class="p-2 text-gray-300">Category</th>
               <th class="p-2 text-gray-300">Date</th>
+              <th class="p-2 text-gray-300">Notes</th>
               <th class="p-2 text-right text-gray-300">Amount</th>
               <th class="p-2 text-center text-gray-300">Actions</th>
             </tr>
@@ -1443,11 +1474,15 @@ function renderExpenseList() {
     });
     
     sortedExpenses.forEach(expense => {
+      const notesDisplay = expense.notes ? expense.notes : '-';
+      const amountClass = expense.category === 'Savings' ? 'text-blue-300' : 'text-red-300';
+      
       html += `
         <tr class="border-b border-gray-700">
           <td class="p-2 text-gray-300">${expense.category}</td>
           <td class="p-2 text-gray-300">${formatDate(expense.date)}</td>
-          <td class="p-2 text-right text-red-300">${formatCurrency(expense.amount)}</td>
+          <td class="p-2 text-gray-400">${notesDisplay}</td>
+          <td class="p-2 text-right ${amountClass}">${formatCurrency(expense.amount)}</td>
           <td class="p-2 text-center">
             <button class="text-red-400 hover:text-red-300" onclick="deleteExpense('${expense.id}')">
               Delete
