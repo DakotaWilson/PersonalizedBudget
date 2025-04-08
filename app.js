@@ -1,3 +1,4 @@
+// app.js
 // Firebase Configuration
 const firebaseConfig = {
   apiKey: "AIzaSyDWoRetxkIjcr2IFtaDzy6O86QID5AgHvw",
