@@ -203,7 +203,6 @@ function renderDashboard(container, year, month) { // year, month are for the mo
         <div class="stat-card">
           <h3 class="stat-label income-label">Income</h3>
           <p class="stat-value income-value">${formatCurrency(totalIncome)}</p>
-          ${rolloverDisplay} {/* *** Insert rollover display here *** */}
         </div>
         <div class="stat-card">
           <h3 class="stat-label bills-label">Unpaid Bills Due</h3>
