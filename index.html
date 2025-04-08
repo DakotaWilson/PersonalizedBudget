@@ -4,15 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Vault - Budget Tracker</title>
-  
+
   <!-- Add Tailwind CSS for styling -->
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  
+
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-  
+
   <style>
     body {
       background-color: #111827;
@@ -79,7 +79,7 @@
     }
     .tab-container {
       border-bottom: 1px solid #059669;
-      margin-bottom: 1.5rem;
+      margin-bottom: 1rem; /* Reduced margin */
     }
     .tab {
       padding: 0.5rem 1rem;
@@ -96,6 +96,55 @@
     }
     .tab:not(.active):hover {
       color: #6ee7b7;
+    }
+    /* Month Navigation */
+    .month-navigation {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 0.75rem 0;
+        margin-bottom: 1.5rem;
+        background-color: #1f2937;
+        border-radius: 0.375rem;
+        border: 1px solid #065f46;
+    }
+    .month-nav-btn {
+        background-color: #374151;
+        color: #d1d5db;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        border: none;
+        font-weight: bold;
+        margin: 0 0.5rem;
+    }
+    .month-nav-btn:hover {
+        background-color: #4b5563;
+        color: white;
+    }
+    .month-nav-current {
+        background-color: #065f46;
+        color: #6ee7b7;
+        padding: 0.25rem 0.75rem;
+        border-radius: 0.25rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        margin: 0 0.5rem;
+    }
+    .month-nav-current:hover {
+        background-color: #047857;
+    }
+    #current-month-display {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #e5e7eb;
+        min-width: 150px;
+        text-align: center;
     }
     .card {
       background-color: #1f2937;
@@ -295,6 +344,7 @@
       justify-content: center;
       align-items: center;
       z-index: 1000;
+      display: none; /* Ensure it starts hidden */
     }
     .spinner {
       border: 4px solid rgba(0, 0, 0, 0.1);
@@ -548,7 +598,7 @@
       margin-top: 0.25rem;
     }
 
-    .calendar-nav-btn {
+    .calendar-nav-btn { /* Keep for dashboard calendar title area */
       background-color: #374151;
       color: #d1d5db;
       width: 30px;
@@ -557,14 +607,9 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      cursor: pointer;
+      cursor: default; /* No longer clickable */
       border: none;
       font-weight: bold;
-    }
-
-    .calendar-nav-btn:hover {
-      background-color: #4b5563;
-      color: white;
     }
 
     /* Styling for notes */
@@ -607,7 +652,7 @@
 </head>
 <body>
   <!-- Loading Indicator -->
-  <div id="loading-indicator" style="display: none;">
+  <div id="loading-indicator">
     <div class="spinner"></div>
   </div>
 
@@ -620,9 +665,9 @@
         <path d="M2 12L12 17L22 12" stroke="#6ee7b7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </div>
-    
+
     <h1 class="login-title">Vault</h1>
-    
+
     <div id="login-form" class="login-form">
       <div>
         <label class="block text-sm font-medium mb-1 text-gray-300">Email</label>
@@ -647,19 +692,19 @@
     <div class="app-header flex justify-between items-center">
       <div>
         <h1 class="app-title">Vault</h1>
-        <p class="app-subtitle"></p>
+        <p class="app-subtitle">Your Personal Budget Manager</p> <!-- Added subtitle -->
       </div>
-      <div class="flex space-x-2">
-        <div id="user-email" class="text-white self-center mr-4"></div>
-        <button class="bg-gray-800 hover:bg-gray-700 text-green-300 py-2 px-4 rounded border border-green-500" onclick="showActivityLog()">
+      <div class="flex space-x-2 items-center">
+        <div id="user-email" class="text-white self-center mr-4 text-sm"></div>
+        <button class="bg-gray-800 hover:bg-gray-700 text-green-300 py-2 px-4 rounded border border-green-500 text-sm" onclick="showActivityLog()">
           Activity Log
         </button>
-        <button class="bg-red-800 hover:bg-red-700 text-white py-2 px-4 rounded border border-red-500" onclick="logout()">
+        <button class="bg-red-800 hover:bg-red-700 text-white py-2 px-4 rounded border border-red-500 text-sm" onclick="logout()">
           Logout
         </button>
       </div>
     </div>
-    
+
     <!-- Navigation -->
     <div class="tab-container flex">
       <button id="tab-dashboard" class="tab active" onclick="changeTab('dashboard')">Dashboard</button>
@@ -667,10 +712,18 @@
       <button id="tab-bills" class="tab" onclick="changeTab('bills')">Bills</button>
       <button id="tab-expenses" class="tab" onclick="changeTab('expenses')">Expenses</button>
     </div>
-    
+
+    <!-- Month Navigation -->
+    <div id="month-navigation" class="month-navigation">
+        <button id="prev-month-btn" class="month-nav-btn">❮</button>
+        <button id="current-month-btn" class="month-nav-current">Current Month</button>
+        <div id="current-month-display">Month Year</div>
+        <button id="next-month-btn" class="month-nav-btn">❯</button>
+    </div>
+
     <!-- Content -->
     <div id="content">
-      <!-- Dashboard content will be loaded here -->
+      <!-- Content for the selected tab and month will be loaded here -->
     </div>
 
     <!-- Activity Log Modal (Hidden by default) -->
@@ -678,7 +731,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h2 class="modal-title">Activity Log</h2>
-          <button class="modal-close" onclick="hideActivityLog()">&times;</button>
+          <button class="modal-close" onclick="hideActivityLog()">×</button>
         </div>
         <div id="activity-log-content" class="modal-body">
           <!-- Activity log entries will be loaded here -->
@@ -688,13 +741,13 @@
         </div>
       </div>
     </div>
-    
+
     <!-- Edit Notes Modal (Hidden by default) -->
     <div id="edit-notes-modal" class="activity-log-modal" style="display: none;">
       <div class="modal-content">
         <div class="modal-header">
           <h2 class="modal-title">Edit Expense Notes</h2>
-          <button class="modal-close" onclick="hideEditNotesModal()">&times;</button>
+          <button class="modal-close" onclick="hideEditNotesModal()">×</button>
         </div>
         <div class="modal-body">
           <input type="hidden" id="edit-expense-id">
@@ -706,7 +759,7 @@
               </div>
               <div>
                 <label class="block text-sm font-medium mb-1 text-gray-300">Amount</label>
-                <div id="edit-notes-amount" class="text-yellow-300 font-medium"></div>
+                <div id="edit-notes-amount" class="text-yellow-300 font-medium"></div> <!-- Changed color -->
               </div>
               <div>
                 <label class="block text-sm font-medium mb-1 text-gray-300">Date</label>
