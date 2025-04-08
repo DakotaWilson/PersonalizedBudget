@@ -4,15 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Vault - Budget Tracker</title>
-  
+
   <!-- Add Tailwind CSS for styling -->
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  
+
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-  
+
   <style>
     body {
       background-color: #111827;
@@ -79,7 +79,7 @@
     }
     .tab-container {
       border-bottom: 1px solid #059669;
-      margin-bottom: 1.5rem;
+      margin-bottom: 1rem; /* Reduced margin */
     }
     .tab {
       padding: 0.5rem 1rem;
@@ -96,6 +96,24 @@
     }
     .tab:not(.active):hover {
       color: #6ee7b7;
+    }
+    /* Month Filter Styles */
+    #month-filter-container {
+        margin-bottom: 1.5rem; /* Restore margin below filter */
+        padding: 0.5rem 0;
+    }
+    #month-filter-label {
+        margin-right: 0.5rem;
+        font-weight: 500;
+        color: #d1d5db;
+    }
+    #month-filter-select {
+        background-color: #374151;
+        border: 1px solid #4b5563;
+        border-radius: 0.25rem;
+        padding: 0.4rem 0.8rem;
+        color: white;
+        min-width: 180px;
     }
     .card {
       background-color: #1f2937;
@@ -620,9 +638,9 @@
         <path d="M2 12L12 17L22 12" stroke="#6ee7b7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </div>
-    
+
     <h1 class="login-title">Vault</h1>
-    
+
     <div id="login-form" class="login-form">
       <div>
         <label class="block text-sm font-medium mb-1 text-gray-300">Email</label>
@@ -647,7 +665,7 @@
     <div class="app-header flex justify-between items-center">
       <div>
         <h1 class="app-title">Vault</h1>
-        <p class="app-subtitle"></p>
+        <p class="app-subtitle">Your Personal Budget Manager</p> <!-- Updated subtitle -->
       </div>
       <div class="flex space-x-2">
         <div id="user-email" class="text-white self-center mr-4"></div>
@@ -659,7 +677,7 @@
         </button>
       </div>
     </div>
-    
+
     <!-- Navigation -->
     <div class="tab-container flex">
       <button id="tab-dashboard" class="tab active" onclick="changeTab('dashboard')">Dashboard</button>
@@ -667,10 +685,18 @@
       <button id="tab-bills" class="tab" onclick="changeTab('bills')">Bills</button>
       <button id="tab-expenses" class="tab" onclick="changeTab('expenses')">Expenses</button>
     </div>
-    
+
+    <!-- Month Filter Dropdown -->
+    <div id="month-filter-container">
+      <label for="month-filter-select" id="month-filter-label">View Data For:</label>
+      <select id="month-filter-select">
+        <!-- Options will be populated by JavaScript -->
+      </select>
+    </div>
+
     <!-- Content -->
     <div id="content">
-      <!-- Dashboard content will be loaded here -->
+      <!-- Content for the selected tab will be loaded here -->
     </div>
 
     <!-- Activity Log Modal (Hidden by default) -->
@@ -678,7 +704,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h2 class="modal-title">Activity Log</h2>
-          <button class="modal-close" onclick="hideActivityLog()">&times;</button>
+          <button class="modal-close" onclick="hideActivityLog()">×</button>
         </div>
         <div id="activity-log-content" class="modal-body">
           <!-- Activity log entries will be loaded here -->
@@ -688,13 +714,13 @@
         </div>
       </div>
     </div>
-    
+
     <!-- Edit Notes Modal (Hidden by default) -->
     <div id="edit-notes-modal" class="activity-log-modal" style="display: none;">
       <div class="modal-content">
         <div class="modal-header">
           <h2 class="modal-title">Edit Expense Notes</h2>
-          <button class="modal-close" onclick="hideEditNotesModal()">&times;</button>
+          <button class="modal-close" onclick="hideEditNotesModal()">×</button>
         </div>
         <div class="modal-body">
           <input type="hidden" id="edit-expense-id">
